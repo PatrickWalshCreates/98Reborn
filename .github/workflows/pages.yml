@@ -20,6 +20,8 @@ concurrency:
 
 jobs:
   deploy:
+    # Skipped while the repository is private (free accounts can't publish Pages from private repos).
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages
