@@ -1,0 +1,15 @@
+{
+  "id": "ram-cap",
+  "name": "Cap usable RAM",
+  "version": "1.0.0",
+  "description": "Limits the memory Windows 98 SE uses via SYSTEM.INI [386Enh] MaxPhysPage. Stock 98 SE becomes unstable above 512 MB and fails to boot above roughly 1.5 GB. Raising the cap past 1 GB needs a memory patch module (planned).",
+  "category": "stability",
+  "license": "MIT",
+  "when": { "ram_mb_min": 1025, "if_unknown": "apply" },
+  "params": {
+    "ram_cap_mb": { "type": "int", "default": 1024, "min": 256, "max": 1024, "description": "Maximum RAM Windows may use, in MB." }
+  },
+  "ops": [
+    { "op": "ini.set", "file": "{{windir}}\\SYSTEM.INI", "section": "386Enh", "key": "MaxPhysPage", "value": "{{ram_cap_mb|pages_hex}}" }
+  ]
+}

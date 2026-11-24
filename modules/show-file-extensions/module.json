@@ -1,0 +1,11 @@
+{
+  "id": "show-file-extensions",
+  "name": "Show file extensions",
+  "version": "1.0.0",
+  "description": "Makes Explorer show file extensions (HideFileExt=0). Applied by real-mode REGEDIT on the next boot.",
+  "category": "usability",
+  "license": "MIT",
+  "ops": [
+    { "op": "reg.set", "path": "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "name": "HideFileExt", "type": "dword", "data": "0" }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "boot-options",
+  "name": "Boot options for modern hardware",
+  "version": "1.0.0",
+  "description": "Sets MSDOS.SYS [Options]: hides the animated boot logo (it can hang or garble output on modern video BIOSes) and keeps F8 boot keys enabled for recovery.",
+  "category": "boot",
+  "license": "MIT",
+  "params": {
+    "show_logo": { "type": "bool", "default": false, "description": "Show the Windows boot logo." }
+  },
+  "ops": [
+    { "op": "ini.set", "file": "MSDOS.SYS", "section": "Options", "key": "Logo", "value": "{{show_logo}}" },
+    { "op": "ini.set", "file": "MSDOS.SYS", "section": "Options", "key": "BootKeys", "value": "1" }
+  ]
+}

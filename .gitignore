@@ -1,0 +1,10 @@
+# Never commit Microsoft media or binaries
+*.iso
+*.img
+*.cab
+user/
+build/
+out/
+.DS_Store
+/ISOs/
+/lab/

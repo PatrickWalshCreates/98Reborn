@@ -1,0 +1,6 @@
+{
+  "id": "core",
+  "name": "Core",
+  "description": "Patched Windows 98 SE with stability fixes for modern hardware, drivers and the Control Center. No extras.",
+  "modules": ["ram-cap", "vcache-tuning", "boot-options", "show-file-extensions"]
+}

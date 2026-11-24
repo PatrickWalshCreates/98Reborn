@@ -1,0 +1,16 @@
+{
+  "id": "vcache-tuning",
+  "name": "Limit disk cache size",
+  "version": "1.0.0",
+  "description": "Caps VCACHE in SYSTEM.INI so the disk cache can't exhaust the address space on machines with more than 512 MB of RAM (a common cause of 'Insufficient memory to initialize Windows').",
+  "category": "stability",
+  "license": "MIT",
+  "after": ["ram-cap"],
+  "when": { "ram_mb_min": 513, "if_unknown": "apply" },
+  "params": {
+    "max_file_cache_mb": { "type": "int", "default": 256, "min": 32, "max": 512, "description": "Maximum disk cache in MB." }
+  },
+  "ops": [
+    { "op": "ini.set", "file": "{{windir}}\\SYSTEM.INI", "section": "vcache", "key": "MaxFileCache", "value": "{{max_file_cache_mb|kb}}" }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "id": "gaming",
+  "name": "Gaming",
+  "description": "Core plus a setup for late-90s and early-2000s games, including a DOS-mode startup menu.",
+  "modules": ["ram-cap", "vcache-tuning", "boot-options", "show-file-extensions", "boot-menu"],
+  "params": { "boot-menu.delay": 3 }
+}

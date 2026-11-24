@@ -1,0 +1,16 @@
+{
+  "id": "boot-menu",
+  "name": "Startup menu for DOS games",
+  "version": "1.0.0",
+  "description": "Shows the Windows 98 startup menu on every boot so you can pick 'Command prompt only' for real-mode DOS games.",
+  "category": "gaming",
+  "license": "MIT",
+  "requires": ["boot-options"],
+  "params": {
+    "delay": { "type": "int", "default": 5, "min": 1, "max": 30, "description": "Seconds before the default choice boots." }
+  },
+  "ops": [
+    { "op": "ini.set", "file": "MSDOS.SYS", "section": "Options", "key": "BootMenu", "value": "1" },
+    { "op": "ini.set", "file": "MSDOS.SYS", "section": "Options", "key": "BootMenuDelay", "value": "{{delay}}" }
+  ]
+}
