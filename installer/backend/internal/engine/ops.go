@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/win9x-modern/w9xm/internal/vxd"
 	"strings"
 
 	"github.com/win9x-modern/w9xm/internal/delta"
@@ -60,7 +61,7 @@ func (x *opCtx) run(op module.Op) error {
 		value = &v
 	}
 	lns := append([]string(nil), op.Lines...)
-	ptrs := []*string{&op.File, &op.Section, &op.Key, value, &op.Path, &op.Name, &op.Data}
+	ptrs := []*string{&op.File, &op.Section, &op.Key, value, &op.Path, &op.Name, &op.Data, &op.Dest}
 	for i := range lns {
 		ptrs = append(ptrs, &lns[i])
 	}
@@ -221,6 +222,30 @@ func (x *opCtx) run(op module.Op) error {
 		}
 		x.note("%s: patched %d place(s)", op.File, len(hits))
 		return x.ov.Write(op.File, out)
+
+	case "vxd.extract":
+		if _, exists, err := x.ov.Read(op.Dest); err != nil {
+			return err
+		} else if exists {
+			x.note("%s already extracted", op.Dest)
+			return nil
+		}
+		src, exists, err := x.ov.Read(op.File)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return x.precondition(op, "%s not found", op.File)
+		}
+		c, err := vxd.Open(src)
+		if err != nil {
+			return x.precondition(op, "%s: %v", op.File, err)
+		}
+		img, err := c.Extract(op.Name)
+		if err != nil {
+			return x.precondition(op, "%v", err)
+		}
+		return x.ov.Write(op.Dest, img)
 
 	case "ini.set", "ini.add", "ini.delete":
 		cur, exists, err := x.ov.Read(op.File)

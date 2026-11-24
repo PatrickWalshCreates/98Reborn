@@ -105,6 +105,7 @@ func (s *linuxSystem) Install(r installui.Request, stage func(string)) error {
 		Key:    r.Key, Answers: r.Answers, AcceptEULA: true,
 		Edition: r.Edition, ModulesDir: findCI(s.med.Mount, "98reborn/modules"), EditionsDir: findCI(s.med.Mount, "98reborn/editions"),
 		BootDir: findCI(s.med.Mount, "98reborn/boot"), RegisterBoot: r.RegisterBoot,
+		ACPI:  s.UEFI(), // UEFI PCs start Windows 98 through ReBIOS, which gives it ACPI
 		Facts: facts, WorkDir: workDir, Log: logf,
 		Stage: func(st string) { marker("INSTALL " + st); stage(st) },
 	})

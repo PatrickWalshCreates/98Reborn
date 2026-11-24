@@ -54,6 +54,8 @@ func cmdInstallDisk(args []string) error {
 	makeDefault := fs.Bool("make-default", true, "make Windows 98 the active (BIOS boot) partition")
 	accept := fs.Bool("accept-eula", false, "you accept the Windows 98 license agreement")
 	planOnly := fs.Bool("plan", false, "only show the options")
+	acpi := fs.Bool("acpi", false, "install in ACPI mode (for UEFI PCs, started through ReBIOS)")
+	bootDir := fs.String("boot-dir", "", "98Reborn Boot files (98reborn-boot.efi, rebios.efi, csmwrapx64.efi, NOTICE.txt) to put in \\EFI")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -115,7 +117,7 @@ func cmdInstallDisk(args []string) error {
 		Device: f, Disk: d, Choice: o, MakeDefault: *makeDefault,
 		Source: lab.ISOSource(m), Key: key, Answers: lab.Answers{Name: "98Reborn Test", Computer: "RETRO98", TimeZone: "Pacific"},
 		AcceptEULA: *accept, Edition: *edition, ModulesDir: *modDir, EditionsDir: *edDir,
-		WorkDir: *work, Log: os.Stdout,
+		WorkDir: *work, Log: os.Stdout, ACPI: *acpi, BootDir: *bootDir,
 		Stage: func(s string) { fmt.Printf("[%s] stage: %s\n", time.Since(start).Round(time.Second), s) },
 	})
 	if err != nil {

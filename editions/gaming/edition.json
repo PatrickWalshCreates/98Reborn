@@ -3,6 +3,7 @@
   "name": "Gaming",
   "description": "For the games you grew up with: Core plus DOS mode, period-correct sound and music, 3D options, speed control for games too fast on modern CPUs, controller support and mounting your own game CDs.",
   "modules": [
+    "cpu-speed-fix",
     "ram-cap",
     "vcache-tuning",
     "boot-options",

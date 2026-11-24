@@ -79,6 +79,10 @@ type Op struct {
 	Find    string `json:"find,omitempty"`
 	Replace string `json:"replace,omitempty"`
 
+	// vxd.extract: copy driver Name out of the VMM32.VXD container File to
+	// Dest, where Windows loads it in place of the packed copy.
+	Dest string `json:"dest,omitempty"`
+
 	// ini.*
 	Section string  `json:"section,omitempty"`
 	Key     string  `json:"key,omitempty"`
@@ -110,7 +114,7 @@ var (
 )
 
 var OpTypes = []string{
-	"file.copy", "file.delete", "file.delta", "file.bytes", "file.pattern",
+	"file.copy", "file.delete", "file.delta", "file.bytes", "file.pattern", "vxd.extract",
 	"ini.set", "ini.add", "ini.delete",
 	"lines.block", "lines.remove_block", "lines.edit",
 	"reg.set", "reg.delete",
@@ -229,7 +233,7 @@ func (m *Module) Validate() error {
 }
 
 func (op Op) templated() []string {
-	s := []string{op.File, op.Section, op.Key, op.Path, op.Name, op.Data, op.Source}
+	s := []string{op.File, op.Section, op.Key, op.Path, op.Name, op.Data, op.Source, op.Dest}
 	if op.Value != nil {
 		s = append(s, *op.Value)
 	}
@@ -362,6 +366,11 @@ func (m *Module) validateOp(op Op) error {
 		r, err2 := ParsePattern(op.Replace)
 		if err1 != nil || err2 != nil || len(f) == 0 || len(f) != len(r) {
 			return fmt.Errorf("find/replace must be equal-length hex patterns (?? = any byte)")
+		}
+		return nil
+	case "vxd.extract":
+		if op.File == "" || op.Name == "" || op.Dest == "" {
+			return fmt.Errorf("file, name and dest are required")
 		}
 		return nil
 	case "ini.set", "ini.add":

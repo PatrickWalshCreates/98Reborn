@@ -66,7 +66,7 @@ func TestBuildFromCD(t *testing.T) {
 	dir := t.TempDir()
 
 	floppy := filepath.Join(dir, "a.img")
-	if err := buildFloppy(ISOSource(m), floppy); err != nil {
+	if err := buildFloppy(ISOSource(m), floppy, false); err != nil {
 		t.Fatal(err)
 	}
 	fh, _ := os.Open(floppy)

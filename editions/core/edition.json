@@ -3,6 +3,7 @@
   "name": "Core",
   "description": "For the software you still depend on: patched Windows 98 SE tuned for stability on modern hardware, with matched drivers, the runtimes old business software expects, legacy serial/parallel I/O and easy data exchange.",
   "modules": [
+    "cpu-speed-fix",
     "ram-cap",
     "vcache-tuning",
     "boot-options",

@@ -225,7 +225,7 @@ func installFlow(med *medium, rep *compat.Report, auto bool) {
 		Source: lab.DirSource{Dir: med.Setup, Floppy: findCI(med.Mount, "98reborn/cdboot.img")},
 		Key:    key, Answers: ans, AcceptEULA: true,
 		Edition: edition, ModulesDir: findCI(med.Mount, "98reborn/modules"), EditionsDir: findCI(med.Mount, "98reborn/editions"),
-		BootDir: findCI(med.Mount, "98reborn/boot"), RegisterBoot: rep.Scan.Firmware == "uefi",
+		BootDir: findCI(med.Mount, "98reborn/boot"), RegisterBoot: rep.Scan.Firmware == "uefi", ACPI: rep.Scan.Firmware == "uefi",
 		Facts: rep.Scan.Facts(), WorkDir: work, Log: logf,
 		Stage: func(s string) {
 			step(stageNames[s])

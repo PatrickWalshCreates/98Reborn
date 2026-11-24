@@ -52,6 +52,8 @@ type Options struct {
 	// RegisterBoot adds a "98Reborn Boot" UEFI boot entry, first in the boot
 	// order (the installer only sets this when it was itself started by UEFI).
 	RegisterBoot bool
+	// ACPI installs Windows 98 in ACPI mode (for UEFI PCs, through ReBIOS).
+	ACPI bool
 
 	WorkDir string // scratch space: the setup image lives here (sparse)
 	QEMU    string
@@ -92,7 +94,7 @@ func Run(o Options) error {
 	err = lab.RunSetup(lab.SetupOptions{
 		Source: o.Source, Image: img, PartStart: c.Start, PartSectors: c.Sectors,
 		Key: o.Key, Answers: o.Answers, AcceptEULA: o.AcceptEULA, QEMU: o.QEMU,
-		WorkDir: o.WorkDir, Log: log,
+		WorkDir: o.WorkDir, Log: log, ACPI: o.ACPI,
 	})
 	if err != nil {
 		return err

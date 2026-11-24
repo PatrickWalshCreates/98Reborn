@@ -106,7 +106,11 @@ func floppyConfig() []byte {
 	return crlf("DEVICE=HIMEM.SYS /TESTMEM:OFF", "DOS=HIGH", "FILES=60", "BUFFERS=30", "LASTDRIVE=Z")
 }
 
-func floppyAutoexec(setupDir string) []byte {
+func floppyAutoexec(setupDir string, acpi bool) []byte {
+	sw := ""
+	if acpi {
+		sw = " /p j" // install in ACPI mode
+	}
 	return crlf(
 		"@ECHO OFF",
 		"ECHO "+markDOS+" > COM1",
@@ -115,7 +119,7 @@ func floppyAutoexec(setupDir string) []byte {
 		"C:",
 		`CD \`+setupDir,
 		"ECHO "+markSetup+" > COM1",
-		`SETUP.EXE C:\MSBATCH.INF /IS /IE /IM /IV`,
+		`SETUP.EXE C:\MSBATCH.INF /IS /IE /IM /IV`+sw,
 	)
 }
 
@@ -331,6 +335,11 @@ type SetupOptions struct {
 	Timeout                time.Duration
 	Log                    io.Writer
 	Resume                 bool
+	// ACPI installs Windows 98 in ACPI mode (Setup /p j): right for PCs
+	// started through ReBIOS, which gives Windows 98 ACPI tables it
+	// understands. Native CSM firmware's tables are for modern Windows, so
+	// those PCs get the non-ACPI (Plug and Play BIOS) install.
+	ACPI bool
 }
 
 // RunSetup builds the setup disk and boot floppy, runs Setup until Windows
@@ -369,7 +378,7 @@ func RunSetup(o SetupOptions) error {
 		if err := buildInstallDisk(o.Source, o.Image, start, n, size, o.Key, o.Answers); err != nil {
 			return err
 		}
-		if err := buildFloppy(o.Source, floppy); err != nil {
+		if err := buildFloppy(o.Source, floppy, o.ACPI); err != nil {
 			return err
 		}
 	}
@@ -441,7 +450,7 @@ func buildInstallDisk(src Source, imgPath string, start, n, size int64, key stri
 	return v.Sync()
 }
 
-func buildFloppy(src Source, path string) error {
+func buildFloppy(src Source, path string, acpi bool) error {
 	img, err := src.BootFloppy()
 	if err != nil {
 		return err
@@ -458,7 +467,7 @@ func buildFloppy(src Source, path string) error {
 		if err := v.WriteFile("CONFIG.SYS", floppyConfig(), time.Time{}); err != nil {
 			return err
 		}
-		return v.WriteFile("AUTOEXEC.BAT", floppyAutoexec(src.SetupDirName()), time.Time{})
+		return v.WriteFile("AUTOEXEC.BAT", floppyAutoexec(src.SetupDirName(), acpi), time.Time{})
 	})
 }
 

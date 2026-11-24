@@ -40,7 +40,7 @@ anywhere on a large disk, including next to a big Windows or Linux partition.
 
 | Area | Today | Plan |
 |---|---|---|
-| Fast-CPU bugs | Some 98 components fail on CPUs over ~2 GHz | Fix modules applied during install (the scanner already promises this). These must be done before real-hardware testing |
+| Fast-CPU bugs | The network driver's speed test divides by zero above ~2 GHz; the memory manager's TLB invalidation bug crashes 98 on newer CPUs | **Done:** the `cpu-speed-fix` module (in both editions) patches NDIS.VXD and the disk drivers, and extracts VMM from VMM32.VXD to apply the TLB fix. Patterns from patcher9x (MIT) |
 | Timers and power | 98 predates HPET, modern ACPI and C-states, so CPUs run hot, and timing is off on some boards | Idle (HLT) fixes, ACPI table workarounds, and a stable timer source |
 | SSE / modern instructions | 98 SE saves SSE registers on task switches; AVX and newer need XSAVE support the kernel doesn't have | Kernel support for saving extended state, so newer compilers' code and libraries run safely. Software written for 98 rarely needs more than SSE2, so this matters for new tools, not old programs |
 | More than one core | 98 schedules a single CPU | Out of scope for the 98 kernel itself. Turbo mode ([GPU.md](GPU.md)) uses the other cores on the host side |
