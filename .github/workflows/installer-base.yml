@@ -52,12 +52,19 @@ jobs:
           kill %1 || true
           grep -a "98REBORN:" boot.log
           grep -q "98REBORN:MEDIUM" boot.log && grep -q "98REBORN:GRADE" boot.log
+      - name: Build the 98Reborn Tool for every desktop OS
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          [ "$GITHUB_REF_TYPE" = tag ] || VERSION="0.1.0-dev+${GITHUB_SHA::7}"
+          VERSION="$VERSION" sh scripts/build-all.sh >/dev/null
+          ls dist/98reborn-tool-*
       - uses: actions/upload-artifact@v7
         with:
           name: 98reborn-base
           path: |
             installer/backend/dist/98reborn-base.iso
             installer/backend/dist/98reborn-base.iso.sha256
+            installer/backend/dist/98reborn-tool-*
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -75,4 +82,4 @@ jobs:
         run: |
           gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
             gh release create "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --prerelease --title "98Reborn $GITHUB_REF_NAME" --notes "Installer base image. Use the 98Reborn Tool to build your installer from it."
-          gh release upload "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --clobber 98reborn-base.iso 98reborn-base.iso.sha256
+          gh release upload "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --clobber 98reborn-base.iso 98reborn-base.iso.sha256 98reborn-tool-*

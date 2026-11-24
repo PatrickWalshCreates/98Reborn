@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>98Reborn Tool</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+:root {
+  --bg: #f7f7f4; --surface: #fff; --surface-2: #efefe9; --text: #16181d; --muted: #555b66;
+  --border: #d9d9d1; --accent: #0f766e; --accent-strong: #0b5c56; --accent-soft: #ccfbf1;
+  --warn: #9a5b00; --warn-soft: #fff3d6; --ok: #166534; --ok-soft: #dcfce7; --bad: #b42318; --bad-soft: #fde8e6;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1014; --surface: #151a20; --surface-2: #1c232b; --text: #e8ebef; --muted: #9aa4b1;
+    --border: #2a333d; --accent: #2dd4bf; --accent-strong: #5eead4; --accent-soft: #10302d;
+    --warn: #f5b84b; --warn-soft: #2e2410; --ok: #4ade80; --ok-soft: #10291a; --bad: #f97066; --bad-soft: #3a1512;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 var(--sans); -webkit-font-smoothing: antialiased; }
+header { border-bottom: 1px solid var(--border); background: var(--surface); }
+.bar { max-width: 880px; margin: 0 auto; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+.bar img { width: 30px; height: 30px; }
+.bar h1 { font-size: 18px; margin: 0; letter-spacing: -0.01em; }
+.bar .ver { color: var(--muted); font-size: 13px; }
+.bar .grow { flex: 1; }
+main > * { min-width: 0; }
+.note, .f, .report { overflow-wrap: anywhere; }
+main { max-width: 880px; margin: 0 auto; padding: 20px 16px 48px; display: grid; gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.card h2 { margin: 0 0 4px; font-size: 18px; display: flex; align-items: center; gap: 10px; }
+.num { width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-strong); display: inline-grid; place-items: center; font-size: 14px; font-weight: 700; flex: none; }
+.lead { color: var(--muted); margin: 0 0 14px; }
+button { font: inherit; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); padding: 8px 14px; cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+@media (prefers-color-scheme: dark) { button.primary { color: #04201d; } }
+button.primary:hover:not(:disabled) { background: var(--accent-strong); }
+button:disabled { opacity: .5; cursor: default; }
+button.link { background: none; border: none; color: var(--muted); padding: 4px 8px; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 10px 0; }
+.field { flex: 1; min-width: 220px; display: flex; gap: 8px; }
+.field input { flex: 1; min-width: 0; font: 13px var(--mono); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+label.k { width: 150px; color: var(--muted); font-size: 14px; }
+@media (max-width: 560px) { label.k { width: 100%; } }
+.note { font-size: 14px; padding: 8px 12px; border-radius: 8px; margin: 6px 0 0; }
+.note.ok { background: var(--ok-soft); color: var(--ok); }
+.note.warn { background: var(--warn-soft); color: var(--warn); }
+.note.bad { background: var(--bad-soft); color: var(--bad); }
+.tier { display: inline-block; font-weight: 800; letter-spacing: .04em; padding: 4px 12px; border-radius: 999px; font-size: 14px; }
+.t-Gold { background: #fef3c7; color: #92400e; } .t-Silver { background: #e5e7eb; color: #374151; }
+.t-Bronze { background: #fde2cc; color: #8a3b12; } .t-In { background: var(--accent-soft); color: var(--accent-strong); }
+.t-Not { background: var(--bad-soft); color: var(--bad); }
+.report h3 { font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 16px 0 6px; }
+.f { padding: 8px 0; border-top: 1px solid var(--border); display: grid; grid-template-columns: 22px 1fr; gap: 8px; }
+.f .ic { font-weight: 800; text-align: center; }
+.f .area { font-weight: 600; } .f .dev { color: var(--muted); font: 12px var(--mono); }
+.f .fix { color: var(--accent-strong); font-size: 14px; }
+.lv-block .ic { color: var(--bad); } .lv-warn .ic { color: var(--warn); } .lv-info .ic { color: var(--muted); } .lv-ok .ic { color: var(--ok); }
+.progress { height: 10px; background: var(--surface-2); border-radius: 999px; overflow: hidden; margin: 10px 0 4px; }
+.progress div { height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+.progress.indet div { width: 35%; animation: slide 1.1s ease-in-out infinite; }
+@keyframes slide { from { margin-left: -35%; } to { margin-left: 100%; } }
+.tabs { display: flex; gap: 6px; margin: 4px 0 12px; flex-wrap: wrap; }
+.tabs button[aria-selected="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-strong); font-weight: 600; }
+ol { padding-left: 22px; margin: 6px 0; } li { margin: 4px 0; }
+pre { background: var(--surface-2); padding: 10px 12px; border-radius: 8px; overflow-x: auto; font: 13px/1.5 var(--mono); margin: 6px 0; }
+.muted { color: var(--muted); font-size: 14px; }
+[hidden] { display: none !important; }
+.done-title { font-weight: 700; color: var(--ok); }
+</style>
+</head>
+<body>
+<header><div class="bar">
+  <img src="favicon.svg" alt="">
+  <h1>98Reborn Tool</h1><span class="ver" id="ver"></span>
+  <span class="grow"></span>
+  <button class="link" id="quit" title="Stop the Tool">Quit</button>
+</div></header>
+
+<main>
+  <section class="card" id="s1">
+    <h2><span class="num">1</span>Check a PC</h2>
+    <p class="lead">Grades the computer this Tool is running on. It doesn't have to be the PC you install on: the installer checks that PC again before it changes anything.</p>
+    <div class="row"><button class="primary" id="scan">Check this computer</button><span class="muted" id="scanState"></span></div>
+    <div class="report" id="report" hidden></div>
+  </section>
+
+  <section class="card" id="s2">
+    <h2><span class="num">2</span>Build your installer</h2>
+    <p class="lead">Combines the 98Reborn installer with the setup files from <em>your own</em> Windows 98 SE CD into one bootable ISO. Nothing is uploaded; the ISO is for your use only.</p>
+    <div class="row">
+      <label class="k" for="cd">Your Windows 98 SE CD</label>
+      <div class="field"><input id="cd" placeholder="/path/to/Windows 98 SE.iso" spellcheck="false"><button id="pickCD">Choose…</button></div>
+    </div>
+    <div id="cdNote" class="note" hidden></div>
+    <div class="row">
+      <label class="k" for="out">Save installer as</label>
+      <div class="field"><input id="out" spellcheck="false"><button id="pickOut">Change…</button></div>
+    </div>
+    <p class="muted" id="baseState"></p>
+    <div class="row"><button class="primary" id="build" disabled>Build installer ISO</button></div>
+    <div id="job" hidden>
+      <div class="muted" id="jobStage"></div>
+      <div class="progress" id="bar"><div></div></div>
+      <div id="jobNote" class="note" hidden></div>
+      <div class="row" id="doneRow" hidden><button id="reveal">Show in folder</button></div>
+    </div>
+  </section>
+
+  <section class="card" id="s3">
+    <h2><span class="num">3</span>Make a USB stick</h2>
+    <p class="lead">Write the ISO to a USB stick of 1 GB or more. <strong>Everything on the stick is erased.</strong></p>
+    <div class="tabs" role="tablist">
+      <button role="tab" data-os="darwin">Mac</button>
+      <button role="tab" data-os="windows">Windows</button>
+      <button role="tab" data-os="linux">Linux</button>
+    </div>
+    <div data-panel="darwin">
+      <ol>
+        <li>Install <a href="https://etcher.balena.io/" target="_blank" rel="noopener">balenaEtcher</a> (free).</li>
+        <li>Choose <strong>Flash from file</strong>, pick the installer ISO, select your USB stick, and click <strong>Flash</strong>.</li>
+      </ol>
+      <p class="muted">Or in Terminal: find the stick with <code>diskutil list</code> (e.g. <code>/dev/disk4</code>), then:</p>
+      <pre id="ddMac"></pre>
+    </div>
+    <div data-panel="windows" hidden>
+      <ol>
+        <li>Download <a href="https://rufus.ie/" target="_blank" rel="noopener">Rufus</a> (free).</li>
+        <li>Select your USB stick, click <strong>SELECT</strong> and pick the installer ISO, then <strong>START</strong>.</li>
+        <li>If Rufus asks, choose <strong>ISO Image mode</strong> (DD mode works too).</li>
+      </ol>
+    </div>
+    <div data-panel="linux" hidden>
+      <ol>
+        <li>Use <a href="https://etcher.balena.io/" target="_blank" rel="noopener">balenaEtcher</a> or GNOME Disks (<em>Restore Disk Image</em>), or in a terminal (check the device with <code>lsblk</code>):</li>
+      </ol>
+      <pre id="ddLinux"></pre>
+    </div>
+  </section>
+
+  <section class="card" id="s4">
+    <h2><span class="num">4</span>Install on the PC</h2>
+    <ol>
+      <li>Plug the stick into the PC (a USB 2 port if it has one) and connect Ethernet if you can.</li>
+      <li>Turn it on and open the boot menu, usually <kbd>F12</kbd>, <kbd>F11</kbd>, <kbd>F8</kbd> or <kbd>Esc</kbd>, and choose the USB stick. If it won't start, turn off <strong>Secure Boot</strong> in the BIOS setup.</li>
+      <li>The installer connects to the internet (you can skip that), checks the PC, then asks where Windows 98 should go. It can install next to Windows or Linux, and shows you the disk before and after. Nothing changes until you confirm.</li>
+      <li>Have your Windows 98 SE product key ready.</li>
+    </ol>
+  </section>
+</main>
+
+<script>
+const token = new URLSearchParams(location.search).get('t') || '';
+const $ = id => document.getElementById(id);
+async function api(path, body) {
+  const r = await fetch('/api/' + path, {
+    method: body === undefined ? 'GET' : 'POST',
+    headers: {'X-98R-Token': token, 'Content-Type': 'application/json'},
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const j = await r.json().catch(() => ({error: 'The Tool stopped responding.'}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function note(el, kind, text) { el.hidden = !text; el.className = 'note ' + kind; el.textContent = text || ''; }
+
+let info = {}, cdOK = false;
+function shq(p) { return "'" + p.replace(/'/g, "'\\''") + "'"; }
+function updateDD() {
+  const p = $('out').value || 'installer.iso';
+  $('ddMac').textContent = 'diskutil unmountDisk /dev/diskN\nsudo dd if=' + shq(p) + ' of=/dev/rdiskN bs=4m\ndiskutil eject /dev/diskN';
+  $('ddLinux').textContent = 'sudo dd if=' + shq(p) + ' of=/dev/sdX bs=4M status=progress conv=fsync';
+}
+function showOS(os) {
+  document.querySelectorAll('[role=tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.os === os));
+  document.querySelectorAll('[data-panel]').forEach(p => p.hidden = p.dataset.panel !== os);
+}
+document.querySelectorAll('[role=tab]').forEach(b => b.onclick = () => showOS(b.dataset.os));
+
+function baseText(b) {
+  return b && b.present
+    ? `Installer base ${esc(b.version || '')} is ready (${b.size_mb} MB).`
+    : 'The installer base image (about 150 MB, open source) will be downloaded from GitHub on the first build.';
+}
+
+async function init() {
+  try {
+    info = await api('info');
+  } catch (e) { document.body.innerHTML = '<main><div class="card">Open the Tool from the window it printed (this page needs its private link).</div></main>'; return; }
+  $('ver').textContent = 'v' + info.version;
+  $('out').value = info.default_out;
+  $('baseState').innerHTML = baseText(info.base);
+  showOS(['darwin', 'windows', 'linux'].includes(info.os) ? info.os : 'linux');
+  updateDD();
+}
+
+$('scan').onclick = async () => {
+  $('scan').disabled = true; $('scanState').textContent = 'Checking…';
+  try {
+    const {report} = await api('scan', {});
+    renderReport(report);
+    $('scanState').textContent = '';
+  } catch (e) { $('scanState').textContent = e.message; }
+  $('scan').disabled = false; $('scan').textContent = 'Check again';
+};
+
+function renderReport(r) {
+  const tier = r.tier; const cls = 't-' + tier.split(' ')[0];
+  const s = r.scan || {};
+  const parts = [s.cpu, s.ram_mb ? Math.round(s.ram_mb / 1024) + ' GB RAM' : '', s.os].filter(Boolean).join(' · ');
+  const groups = [['block', 'What stops it', '✕'], ['warn', 'What holds it back', '!'], ['info', 'Good to know', 'i'], ['ok', "What's fine", '✓']];
+  let h = `<div class="row"><span class="tier ${cls}">${esc(tier.toUpperCase())}</span><span>${esc(r.meaning)}</span></div><div class="muted">${esc(parts)}</div>`;
+  for (const [lv, title, ic] of groups) {
+    const fs = (r.findings || []).filter(f => f.level === lv);
+    if (!fs.length) continue;
+    h += `<h3>${title}</h3>`;
+    for (const f of fs) h += `<div class="f lv-${lv}"><div class="ic">${ic}</div><div><span class="area">${esc(f.area)}:</span> ${esc(f.reason)}` +
+      (f.device ? `<div class="dev">${esc(f.device)}</div>` : '') + (f.fix ? `<div class="fix">${esc(f.fix)}</div>` : '') + `</div></div>`;
+  }
+  if (r.tier === 'Not supported' || r.tier === 'In development')
+    h += '<p class="note warn">That\'s fine if this isn\'t the PC you\'re installing on: you can still build the installer here. The installer checks the target PC itself.</p>';
+  $('report').innerHTML = h; $('report').hidden = false;
+}
+
+let cdTimer;
+async function checkCD() {
+  const p = $('cd').value.trim(); cdOK = false; $('build').disabled = true;
+  if (!p) { note($('cdNote'), 'ok', ''); return; }
+  try {
+    const r = await api('check-cd', {path: p});
+    cdOK = r.ok; note($('cdNote'), r.ok ? 'ok' : 'bad', r.message);
+  } catch (e) { note($('cdNote'), 'bad', e.message); }
+  $('build').disabled = !cdOK;
+}
+$('cd').oninput = () => { clearTimeout(cdTimer); cdTimer = setTimeout(checkCD, 400); };
+$('out').oninput = updateDD;
+$('pickCD').onclick = async () => {
+  try { const r = await api('pick', {kind: 'cd'}); if (!r.cancelled) { $('cd').value = r.path; checkCD(); } }
+  catch (e) { note($('cdNote'), 'bad', e.message); }
+};
+$('pickOut').onclick = async () => {
+  try { const r = await api('pick', {kind: 'out', current: $('out').value}); if (!r.cancelled) { $('out').value = r.path.endsWith('.iso') ? r.path : r.path + '.iso'; updateDD(); } }
+  catch (e) { alert(e.message); }
+};
+
+$('build').onclick = async () => {
+  $('build').disabled = true; $('job').hidden = false; $('doneRow').hidden = true; note($('jobNote'), 'ok', '');
+  try { await api('build', {cd: $('cd').value.trim(), out: $('out').value.trim()}); poll(); }
+  catch (e) { note($('jobNote'), 'bad', e.message); $('build').disabled = !cdOK; }
+};
+async function poll() {
+  let j;
+  try { j = await api('job'); } catch (e) { note($('jobNote'), 'bad', e.message); return; }
+  $('jobStage').textContent = j.stage || '';
+  const bar = $('bar');
+  bar.classList.toggle('indet', j.state === 'running' && j.progress < 0);
+  bar.firstElementChild.style.width = j.progress >= 0 ? (j.progress * 100).toFixed(1) + '%' : '';
+  if (j.state === 'running') { setTimeout(poll, 500); return; }
+  if (j.state === 'done') {
+    note($('jobNote'), 'ok', `Your installer is ready: ${j.out} (${j.size_mb} MB). Next, put it on a USB stick.`);
+    $('doneRow').hidden = false;
+    $('baseState').innerHTML = baseText((await api('info')).base);
+    $('s3').scrollIntoView({behavior: 'smooth', block: 'start'});
+  } else if (j.state === 'error') {
+    note($('jobNote'), 'bad', j.message);
+  }
+  $('build').disabled = !cdOK;
+}
+$('reveal').onclick = () => api('reveal', {path: $('out').value.trim()}).catch(e => alert(e.message));
+$('quit').onclick = async () => {
+  await api('quit', {}).catch(() => {});
+  document.body.innerHTML = '<main><div class="card"><h2>98Reborn Tool has stopped.</h2><p class="lead">You can close this tab.</p></div></main>';
+};
+init();
+</script>
+</body>
+</html>

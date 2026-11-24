@@ -24,6 +24,7 @@ const (
 	BIOSBoot = "boot/syslinux/isolinux.bin"
 	EFIBoot  = "boot/efi.img"
 	BaseInfo = "98reborn/base.json"
+	Hybrid   = "boot/syslinux/isohdpfx.bin"
 	// BootFloppy is the CD's El Torito boot floppy, copied by Compose.
 	BootFloppy = "98reborn/cdboot.img"
 )
@@ -115,16 +116,21 @@ func Compose(o Options) error {
 		Open: func() (io.ReadCloser, error) { return io.NopCloser(strings.NewReader(string(info))), nil }})
 	logf("base: %d files; your CD: %d setup files from %s", nBase, len(files)-nBase-2, path.Clean(cd.SetupDir))
 
+	hybrid, err := base.ReadFile(Hybrid) // older base images lack it: CD/Rufus-only
+	if err != nil {
+		hybrid = nil
+	}
 	f, err := os.Create(o.Out)
 	if err != nil {
 		return err
 	}
 	err = isowriter.Write(f, isowriter.Options{
-		VolumeID: "98REBORN",
-		Files:    files,
-		BIOS:     &isowriter.BootEntry{Path: BIOSBoot, Emulation: "none", LoadSectors: 4, InfoTable: true},
-		EFI:      &isowriter.BootEntry{Path: EFIBoot, Emulation: "none"},
-		Now:      o.Now,
+		VolumeID:  "98REBORN",
+		Files:     files,
+		BIOS:      &isowriter.BootEntry{Path: BIOSBoot, Emulation: "none", LoadSectors: 4, InfoTable: true},
+		EFI:       &isowriter.BootEntry{Path: EFIBoot, Emulation: "none"},
+		Now:       o.Now,
+		HybridMBR: hybrid,
 	})
 	if cerr := f.Close(); err == nil {
 		err = cerr

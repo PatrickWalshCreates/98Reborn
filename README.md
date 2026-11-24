@@ -7,6 +7,9 @@ plus a built-in **Control Center** for specs, monitoring and updates. Core and G
 the installer patches it locally.
 
 - Plan & architecture: [docs/PLAN.md](docs/PLAN.md) · NVMe driver plan: [docs/NVME.md](docs/NVME.md) · Tool and installer: [docs/TOOL.md](docs/TOOL.md) · UEFI boot: [docs/BOOT.md](docs/BOOT.md) · 3D on modern GPUs: [docs/GPU.md](docs/GPU.md) · Modernizing the core (storage, memory, CPU): [docs/CORE.md](docs/CORE.md)
+- **98Reborn Tool** (`installer/backend/cmd/98reborn`): one app for Windows, macOS and Linux that opens in
+  your browser, checks the PC it's on, and builds the bootable USB installer from your own 98 SE CD. Try it
+  from source: `cd installer/backend && go run ./cmd/98reborn`.
 - **PC compatibility scanner:** `98reborn-check` (Windows 10/11 or Linux, no admin rights, nothing is changed
   or sent anywhere) grades a PC Gold / Silver / Bronze / In development / Not supported, with the reasons
   why. Build it with `installer/backend/scripts/build-all.sh`. The rules are data:

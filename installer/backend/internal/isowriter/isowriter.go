@@ -41,6 +41,11 @@ type Options struct {
 	BIOS     *BootEntry
 	EFI      *BootEntry
 	Now      time.Time
+	// HybridMBR (syslinux's isohdpfx.bin) makes the image also bootable when
+	// copied raw to a USB stick (balenaEtcher, dd, Rufus DD mode): an MBR
+	// that starts ISOLINUX on BIOS PCs, and a partition entry for the EFI
+	// image that UEFI firmware boots from. Needs BIOS with InfoTable.
+	HybridMBR []byte
 }
 
 type node struct {
@@ -386,6 +391,9 @@ func Write(w io.WriterAt, o Options) error {
 		next += sectors(n.size)
 	}
 	L.total = next
+	if o.HybridMBR != nil { // whole 1 MiB "cylinders", as isohybrid does
+		L.total = (next + 511) / 512 * 512
+	}
 
 	// File data first (so boot images can be patched with their final LBAs).
 	for _, n := range data {
@@ -469,6 +477,14 @@ func Write(w io.WriterAt, o Options) error {
 	// touching data (the last file may end mid-sector or exactly at the end).
 	if _, err := w.WriteAt(make([]byte, 16*sector), 0); err != nil {
 		return err
+	}
+	if o.HybridMBR != nil {
+		if biosNode == nil || !o.BIOS.InfoTable || len(o.HybridMBR) < 432 {
+			return errors.New("hybrid MBR needs an ISOLINUX BIOS boot entry and a 432+ byte isohdpfx")
+		}
+		if _, err := w.WriteAt(hybridMBR(o.HybridMBR, biosNode, efiNode, L.total), 0); err != nil {
+			return err
+		}
 	}
 	end := int64(L.catalog+1) * sector
 	if len(data) > 0 {
@@ -687,4 +703,42 @@ func writeVDs(w io.WriterAt, o Options, root *node, L layout) error {
 	term[6] = 1
 	_, err := w.WriteAt(term, int64(L.termVD)*sector)
 	return err
+}
+
+// hybridMBR builds the isohybrid master boot record (as syslinux's isohybrid
+// does with --uefi): the boot code finds isolinux.bin through the LBA stored
+// at offset 432; partition 1 covers the image, partition 2 the EFI image.
+func hybridMBR(code []byte, bios, efi *node, total uint32) []byte {
+	mbr := make([]byte, 512)
+	copy(mbr, code[:432])
+	le := binary.LittleEndian
+	le.PutUint32(mbr[432:], bios.lba*4) // in 512-byte sectors
+	le.PutUint32(mbr[440:], uint32(time.Now().UnixNano()))
+	chs := func(lba uint32) []byte {
+		const heads, spt = 64, 32
+		c := lba / (heads * spt)
+		if c > 1023 {
+			c = 1023
+		}
+		h := (lba / spt) % heads
+		sec := lba%spt + 1
+		return []byte{byte(h), byte(sec) | byte((c>>2)&0xC0), byte(c)}
+	}
+	entry := func(i int, active bool, typ byte, start, n uint32) {
+		e := mbr[446+16*i:]
+		if active {
+			e[0] = 0x80
+		}
+		copy(e[1:4], chs(start))
+		e[4] = typ
+		copy(e[5:8], chs(start+n-1))
+		le.PutUint32(e[8:], start)
+		le.PutUint32(e[12:], n)
+	}
+	entry(0, true, 0x17, 0, total*4)
+	if efi != nil {
+		entry(1, false, 0xEF, efi.lba*4, uint32((efi.size+511)/512))
+	}
+	mbr[510], mbr[511] = 0x55, 0xAA
+	return mbr
 }

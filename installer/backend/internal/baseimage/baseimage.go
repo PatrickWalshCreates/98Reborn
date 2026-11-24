@@ -142,6 +142,10 @@ func Build(o Options) error {
 	if err != nil {
 		return err
 	}
+	isohdpfx, _, err := pkgFiles(c, "syslinux", "usr/share/syslinux/isohdpfx.bin", "")
+	if err != nil {
+		return err
+	}
 	sdboot, _, err := pkgFiles(c, "systemd-boot", "usr/lib/systemd/boot/efi/systemd-bootx64.efi", "")
 	if err != nil {
 		return err
@@ -170,6 +174,7 @@ func Build(o Options) error {
 	files := map[string][]byte{
 		"boot/syslinux/isolinux.bin": isolinux,
 		"boot/syslinux/ldlinux.c32":  ldlinux,
+		"boot/syslinux/isohdpfx.bin": isohdpfx,
 		"boot/syslinux/isolinux.cfg": syslinuxCfg,
 		"boot/syslinux/syslinux.cfg": syslinuxCfg,
 		"boot/efi.img":               esp,
@@ -196,7 +201,7 @@ func Build(o Options) error {
 			return err
 		}
 	}
-	return writeISO(o.Out, files, o.Now)
+	return writeISO(o.Out, files, isohdpfx, o.Now)
 }
 
 // QEMU files the installer's Setup VM uses; the rest of QEMU's data
@@ -399,7 +404,7 @@ func espImage(files map[string][]byte, now time.Time) ([]byte, error) {
 	return dev.b, nil
 }
 
-func writeISO(out string, files map[string][]byte, now time.Time) error {
+func writeISO(out string, files map[string][]byte, hybrid []byte, now time.Time) error {
 	var fl []isowriter.File
 	for p, b := range files {
 		b := b
@@ -412,11 +417,12 @@ func writeISO(out string, files map[string][]byte, now time.Time) error {
 		return err
 	}
 	err = isowriter.Write(f, isowriter.Options{
-		VolumeID: "98REBORN",
-		Files:    fl,
-		BIOS:     &isowriter.BootEntry{Path: "boot/syslinux/isolinux.bin", Emulation: "none", LoadSectors: 4, InfoTable: true},
-		EFI:      &isowriter.BootEntry{Path: "boot/efi.img", Emulation: "none"},
-		Now:      now,
+		VolumeID:  "98REBORN",
+		Files:     fl,
+		BIOS:      &isowriter.BootEntry{Path: "boot/syslinux/isolinux.bin", Emulation: "none", LoadSectors: 4, InfoTable: true},
+		EFI:       &isowriter.BootEntry{Path: "boot/efi.img", Emulation: "none"},
+		Now:       now,
+		HybridMBR: hybrid,
 	})
 	if cerr := f.Close(); err == nil {
 		err = cerr

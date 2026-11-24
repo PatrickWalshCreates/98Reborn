@@ -7,7 +7,7 @@ The **98Reborn Tool** is the one download most people need. It runs on the compu
    supported) with reasons and fixes. That doesn't have to be the PC you'll install on; the installer
    checks the target again.
 2. **Create installer media:** you pick your Windows 98 SE CD or ISO, and it writes a new bootable
-   **98Reborn installer ISO**. Put that on a USB stick with Rufus (or the Tool's own writer, later) and boot
+   **98Reborn installer ISO**. Put that on a USB stick with balenaEtcher, Rufus or `dd` (or the Tool's own writer, later) and boot
    the target PC from it.
 
 ## What the 98Reborn ISO contains
@@ -54,9 +54,24 @@ Windows. The installer finds `98SE/` on the medium it booted from.
 | Compose base + your CD into the installer ISO (`w9xm make-installer`) | Done (Tool UI next) |
 | Smart partitioner (multi-boot): detect systems, plan, shrink NTFS/ext4, add the partition | Done (text mode) |
 | Install to the real disk: Setup in a VM on a scratch image, patch, copy only used data into place | Done |
-| Tool UI (local web UI opened in the browser; one binary per OS) | Next |
+| Tool app (`cmd/98reborn`): local web UI opened in the browser; one ~7 MB binary per OS | Done |
 | Installer UI (the same web UI in a kiosk browser on the live system) | Next |
-| Hybrid USB boot (isohybrid MBR/GPT) and a built-in USB writer | Later |
+| Hybrid USB boot (raw copy with Etcher / `dd`) | Done |
+| Built-in USB writer in the Tool | Later |
+| Graphical installer screens (today: text mode) | Next |
+
+## Using the Tool
+
+```
+cd installer/backend
+go run ./cmd/98reborn                          # downloads the published base image on first build
+go run ./cmd/98reborn --base 98reborn-base.iso # or use one you built
+```
+
+The Tool listens on `127.0.0.1` only, on a random port. Every request must carry the random token in the
+link it opens, so other web pages can't use it. File choosers are the OS's own dialogs (AppleScript on
+macOS, Windows Forms on Windows, zenity/kdialog on Linux), with typed paths as a fallback. The base
+image is downloaded from the latest GitHub release and checked against its published SHA-256.
 
 ## Building the base image
 
@@ -68,6 +83,9 @@ runs on macOS, Windows and Linux:
   QEMU's PC firmware go in. The initramfs is about 51 MB, the ISO about 140 MB.
 - **Boots both ways:** ISOLINUX for BIOS, and systemd-boot on a FAT32 EFI image for UEFI. On a USB stick
   written by Rufus (ISO mode), UEFI uses the same files directly from the stick.
+- **Hybrid:** the ISO also carries an isohybrid MBR, so a raw copy (balenaEtcher, `dd`, Rufus DD mode)
+  boots too. On BIOS PCs that MBR starts ISOLINUX; on UEFI PCs a second partition entry points at the
+  EFI image. Tested in QEMU as a USB stick on both.
 
 ```
 cd installer/backend
