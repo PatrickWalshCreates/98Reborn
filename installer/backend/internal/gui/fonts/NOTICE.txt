@@ -1,0 +1,5 @@
+These fonts are Terminus Font, Copyright (C) Dimitar Toshkov Zhekov,
+licensed under the SIL Open Font License, Version 1.1
+(https://openfontlicense.org). They were converted (first 256 glyphs, PSF2)
+by cmd/98reborn-fontgen from Alpine Linux's font-terminus package.
+98Reborn Boot embeds the same fonts (installer/boot/src/font.h).
