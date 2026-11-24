@@ -44,9 +44,13 @@ func TestShrinkRealFileSystems(t *testing.T) {
 			// The shrunk file system must report a size within 300 MB.
 			var after int64
 			if tc.fs == "ntfs" {
-				out, _ := exec.Command("ntfsresize", "--info", "--no-progress-bar", img).CombinedOutput()
+				// After a resize the volume is marked for a check by Windows, so
+				// --info needs --force to report on it.
+				out, _ := exec.Command("ntfsresize", "--info", "--force", "--no-progress-bar", img).CombinedOutput()
 				if m := regexpSize.FindSubmatch(out); m != nil {
 					after = atoi(string(m[1]))
+				} else {
+					t.Logf("ntfsresize --info:\n%s", out)
 				}
 			} else {
 				out, _ := exec.Command("dumpe2fs", "-h", img).CombinedOutput()
