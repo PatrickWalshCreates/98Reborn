@@ -69,7 +69,9 @@ jobs:
             installer/backend/dist/98reborn-tool-*
 
   macapp:
-    runs-on: macos-latest
+    # Any Mac works (both architectures are cross-compiled); the Intel pool
+    # has had more free runners than the arm64 one.
+    runs-on: macos-15-intel
     defaults:
       run:
         working-directory: installer/backend
