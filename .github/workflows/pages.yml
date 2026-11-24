@@ -1,6 +1,6 @@
 # Publishes site/ to GitHub Pages on every push to main that touches it.
-# Pages must be enabled (Settings → Pages → Source: GitHub Actions). On a free
-# account that requires the repository to be public.
+# Pages source: Settings → Pages → GitHub Actions. Free accounts need the
+# repository to be public, so both jobs are skipped while it is private.
 name: Website
 
 on:
@@ -20,18 +20,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    # Skipped while the repository is private (free accounts can't publish Pages from private repos).
+  build:
     if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site
+
+  # A separate job: the artifact is registered by the time it starts.
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v5
