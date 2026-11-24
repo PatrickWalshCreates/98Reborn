@@ -38,6 +38,10 @@ type NetState struct {
 	Online   bool
 	Wired    []string
 	Wireless []string
+	// WifiProblem is set when a Wi-Fi adapter exists but didn't start;
+	// WifiDetails are the facts for a bug report (IDs, driver, kernel log).
+	WifiProblem string
+	WifiDetails []string
 }
 
 // Request is what the user chose.
@@ -406,6 +410,20 @@ func (a *App) network(u *gui.UI, r, btn gui.Rect) {
 	case a.net != nil:
 		if len(a.net.Wireless) > 0 {
 			y = a.wifiPicker(u, gui.R(r.X, y, r.W, r.Y+r.H-y), btn.H)
+		} else if a.net.WifiProblem != "" {
+			y += a.note(c, gui.R(r.X, y, r.W, 0), a.net.WifiProblem, t.Warn, t.WarnSoft) + 8
+			c.Text(t.Small, r.X, y, "Details (a photo of this helps fix it):", t.Muted)
+			y += t.Small.H + 4
+			for _, l := range a.net.WifiDetails {
+				for _, w := range t.Small.Wrap(l, r.W) {
+					if y > r.Y+r.H-(t.Body.H*6) {
+						break
+					}
+					c.Text(t.Small, r.X+8, y, w, t.Text)
+					y += t.Small.H + 1
+				}
+			}
+			y += 8
 		} else {
 			msg := "No internet connection. Check the Ethernet cable and try again."
 			if len(a.net.Wired) == 0 {

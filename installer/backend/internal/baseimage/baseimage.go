@@ -41,6 +41,11 @@ type Options struct {
 	Log       func(format string, a ...any)
 }
 
+// kernelPackage is Alpine's newest stable kernel rather than LTS: modern
+// laptops need it (e.g. Intel Wi-Fi 7: the LTS kernel only accepts older
+// firmware versions than linux-firmware ships, so the card never starts).
+const kernelPackage = "linux-stable"
+
 // Packages in the live system. Their dependencies are added automatically.
 var rootPackages = []string{"busybox", "busybox-binsh", "musl", "kmod", "qemu-system-i386", "ca-certificates-bundle",
 	"ntfs-3g-progs", "e2fsprogs", // shrinking Windows / Linux partitions for multi-boot
@@ -321,9 +326,9 @@ func pkgFiles(c *apk.Client, name, a, b string) ([]byte, []byte, error) {
 // addKernel returns the kernel image and adds the selected modules (plus
 // their dependencies and the module index files) to the tree.
 func addKernel(c *apk.Client, root cpio.Tree, logf func(string, ...any)) ([]byte, string, error) {
-	p := c.Lookup("linux-lts")
+	p := c.Lookup(kernelPackage)
 	if p == nil {
-		return nil, "", errors.New("linux-lts not found")
+		return nil, "", errors.New(kernelPackage + " not found")
 	}
 	raw, err := c.Fetch(p)
 	if err != nil {
@@ -334,7 +339,7 @@ func addKernel(c *apk.Client, root cpio.Tree, logf func(string, ...any)) ([]byte
 	var kver string
 	var dep []byte
 	apk.Unpack(raw, func(e apk.Entry) error {
-		if e.Path == "boot/vmlinuz-lts" {
+		if e.Path == "boot/vmlinuz-"+strings.TrimPrefix(kernelPackage, "linux-") {
 			kernel = e.Data
 		}
 		if strings.HasPrefix(e.Path, "lib/modules/") && strings.HasSuffix(e.Path, "/modules.dep") {
@@ -344,7 +349,7 @@ func addKernel(c *apk.Client, root cpio.Tree, logf func(string, ...any)) ([]byte
 		return nil
 	})
 	if kernel == nil || dep == nil {
-		return nil, "", errors.New("linux-lts: kernel or modules.dep missing")
+		return nil, "", errors.New(kernelPackage + ": kernel or modules.dep missing")
 	}
 	deps := map[string][]string{}
 	for _, l := range strings.Split(string(dep), "\n") {
@@ -597,6 +602,8 @@ func keepNewestIwlwifi(fw map[string][]byte, n int) {
 		by[base[:i]] = append(by[base[:i]], ver{v, p})
 	}
 	for _, vs := range by {
+		// Note: .pnvm files and firmware named with a core version
+		// ("-c101") never get here and are always kept.
 		sort.Slice(vs, func(i, j int) bool { return vs[i].v > vs[j].v })
 		for _, old := range vs[min(n, len(vs)):] {
 			delete(fw, old.name)

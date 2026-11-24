@@ -241,3 +241,53 @@ func firstLine(s string) string {
 	}
 	return s
 }
+
+// wifiDiagnose explains why no Wi-Fi interface exists although the PC has a
+// Wi-Fi controller ("" if it has none).
+func wifiDiagnose() (string, []string) {
+	var details []string
+	devs, _ := filepath.Glob("/sys/bus/pci/devices/*")
+	found := false
+	for _, d := range devs {
+		cls, _ := os.ReadFile(d + "/class")
+		if !strings.HasPrefix(strings.TrimSpace(string(cls)), "0x0280") {
+			continue
+		}
+		found = true
+		rd := func(f string) string {
+			b, _ := os.ReadFile(d + "/" + f)
+			return strings.TrimPrefix(strings.TrimSpace(string(b)), "0x")
+		}
+		drv := "none"
+		if l, err := os.Readlink(d + "/driver"); err == nil {
+			drv = filepath.Base(l)
+		}
+		details = append(details, fmt.Sprintf("Wi-Fi controller %s:%s (subsystem %s:%s) at %s, driver: %s",
+			rd("vendor"), rd("device"), rd("subsystem_vendor"), rd("subsystem_device"), filepath.Base(d), drv))
+	}
+	if !found {
+		return "", nil
+	}
+	fw, _ := os.ReadFile("/sys/module/firmware_class/parameters/path")
+	details = append(details, "Firmware path: "+strings.TrimSpace(string(fw)))
+	if b, err := os.ReadFile("/proc/version"); err == nil {
+		details = append(details, "Kernel: "+strings.Join(strings.Fields(string(b))[:3], " "))
+	}
+	// The kernel's messages about Wi-Fi and firmware, newest last.
+	out, _ := run(5*time.Second, "dmesg")
+	var log []string
+	for _, l := range strings.Split(string(out), "\n") {
+		low := strings.ToLower(l)
+		for _, k := range []string{"iwlwifi", "firmware", "mt79", "mt76", "rtw8", "rtw89", "ath1", "wlan", "cfg80211"} {
+			if strings.Contains(low, k) {
+				log = append(log, strings.TrimSpace(l))
+				break
+			}
+		}
+	}
+	if len(log) > 14 {
+		log = log[len(log)-14:]
+	}
+	details = append(details, log...)
+	return "This PC has a Wi-Fi adapter, but its driver didn't start, so there are no networks to choose. Use Ethernet (or a USB Ethernet adapter) for now.", details
+}

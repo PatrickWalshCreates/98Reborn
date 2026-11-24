@@ -49,7 +49,7 @@ Windows. The installer finds `98SE/` on the medium it booted from.
 | FAT32, partitioning, patching disk images (`fat`, `engine`) | Done |
 | Unattended Setup in a VM + verification (`lab`) | Done, needs a "real disk" mode |
 | **ISO writer** (ISO 9660 + Joliet + El Torito, BIOS and UEFI) | Done |
-| Base installer image (Alpine Linux, kernel 6.18 LTS, QEMU, installer), built by `98reborn-mkbase` locally or in CI | Done: boots BIOS and UEFI, CD and USB |
+| Base installer image (Alpine Linux, kernel 7.1 (linux-stable), QEMU, installer), built by `98reborn-mkbase` locally or in CI | Done: boots BIOS and UEFI, CD and USB |
 | Installer first stage: drivers, find medium + `98SE/`, internet (optional, warned), grade, list disks | Done (text mode) |
 | Compose base + your CD into the installer ISO (`w9xm make-installer`) | Done (Tool UI next) |
 | Smart partitioner (multi-boot): detect systems, plan, shrink NTFS/ext4, add the partition | Done (text mode) |
@@ -170,7 +170,10 @@ well over 100 MB):
 - **Input:** evdev keyboards (US layout), mice, tablets and laptop touchpads (I2C-HID, moved like a
   mouse, with tap-to-click). Devices are picked up as their drivers load or when plugged in.
   Everything also works from the keyboard: Tab, arrows, Space, and Enter for Next.
-- **Wi-Fi:** Intel, MediaTek, Realtek and Qualcomm adapters. The firmware is kept on the medium
+- **Wi-Fi:** Intel, MediaTek, Realtek and Qualcomm adapters. The installer uses Alpine's newest stable
+  kernel rather than LTS, because Intel's Wi-Fi 7 chips need firmware versions the LTS kernel doesn't
+  accept. When an adapter doesn't start, the network step says so and shows its PCI ID, driver and
+  the kernel's messages. The firmware is kept on the medium
   (`98reborn/firmware`, about 76 MB) and loaded once the installer has found it. The network step
   lists networks in range and asks for the password; WPA2 and WPA3 (keys derived in the installer,
   no quoting issues). For tests, `98reborn.testap` on the kernel command line starts a simulated
