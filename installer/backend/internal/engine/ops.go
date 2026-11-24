@@ -184,6 +184,44 @@ func (x *opCtx) run(op module.Op) error {
 		}
 		return x.ov.Write(op.File, out)
 
+	case "file.pattern":
+		cur, exists, err := x.ov.Read(op.File)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return x.precondition(op, "%s not found", op.File)
+		}
+		find, _ := module.ParsePattern(op.Find)
+		repl, _ := module.ParsePattern(op.Replace)
+		// The patched form: replaced bytes where Replace sets them, the
+		// original's checked bytes elsewhere.
+		done := make([]module.PatternByte, len(find))
+		for i := range find {
+			done[i] = find[i]
+			if !repl[i].Any {
+				done[i] = repl[i]
+			}
+		}
+		hits := patternIndex(cur, find)
+		if len(hits) == 0 {
+			if len(patternIndex(cur, done)) > 0 {
+				x.note("%s already patched", op.File)
+				return nil
+			}
+			return x.precondition(op, "%s doesn't contain the code this patch fixes", op.File)
+		}
+		out := append([]byte(nil), cur...)
+		for _, h := range hits {
+			for i, r := range repl {
+				if !r.Any {
+					out[h+i] = r.B
+				}
+			}
+		}
+		x.note("%s: patched %d place(s)", op.File, len(hits))
+		return x.ov.Write(op.File, out)
+
 	case "ini.set", "ini.add", "ini.delete":
 		cur, exists, err := x.ov.Read(op.File)
 		if err != nil {
@@ -309,4 +347,23 @@ func contains(list []string, s string) bool {
 		}
 	}
 	return false
+}
+
+// patternIndex returns the offsets of every non-overlapping match.
+func patternIndex(b []byte, p []module.PatternByte) []int {
+	var out []int
+	for i := 0; i+len(p) <= len(b); i++ {
+		ok := true
+		for j, pb := range p {
+			if !pb.Any && b[i+j] != pb.B {
+				ok = false
+				break
+			}
+		}
+		if ok {
+			out = append(out, i)
+			i += len(p) - 1
+		}
+	}
+	return out
 }

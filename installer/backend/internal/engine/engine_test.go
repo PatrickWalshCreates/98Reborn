@@ -421,3 +421,14 @@ type memFile struct{ *bytes.Reader }
 func (memFile) WriteAt(p []byte, off int64) (int, error) { return 0, os.ErrPermission }
 
 func mustOpen(t *testing.T, b []byte) fat.Device { return memFile{bytes.NewReader(b)} }
+
+func TestPatternOp(t *testing.T) {
+	p, err := module.ParsePattern("29 C9 ?? 20")
+	if err != nil || len(p) != 4 || !p[2].Any {
+		t.Fatalf("%v %v", p, err)
+	}
+	data := []byte{0, 0x29, 0xC9, 0x55, 0x20, 1, 0x29, 0xC9, 0x00, 0x20}
+	if got := patternIndex(data, p); len(got) != 2 || got[0] != 1 || got[1] != 6 {
+		t.Fatalf("matches %v", got)
+	}
+}

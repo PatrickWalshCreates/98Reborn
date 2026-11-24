@@ -78,7 +78,14 @@ uses):
 | Windows 98 entry starts ReBIOS, which declines (no VT-x in plain QEMU) and returns | Works |
 | Fallback starts CSMWrap, SeaBIOS boots the disk's MBR, "Starting Windows 98..." | Works |
 | Windows 98 reaches the desktop under CSMWrap in QEMU | **No:** `IO.SYS` stops early (A20 stays off, the vector table gets overwritten). Real CPUs since Haswell ignore A20, so this may be emulation-only; needs a real PC |
-| Windows 98 under ReBIOS | Needs VT-x emulation (Nephrite, ReBIOS's QEMU fork) or a real PC |
+| Windows 98 under ReBIOS (Nephrite: VT-x + Intel IOMMU, q35, OVMF without CSM) | Gets through DOS into Windows. **Logged boot reaches the desktop** in normal mode. A plain boot stops with a "Windows protection error"; it also reaches the desktop when NDIS.VXD isn't loaded |
+
+**Open:** the protection error depends on layout and timing (logging or one driver fewer hides it).
+It's not the RAM size, the USB emulation, the q35 chipset or the CPU model (each tested). The prime
+suspect is the Windows 98 TLB invalidation bug that patcher9x fixes in VMM. Next step: extract
+`VMM.VXD` from `VMM32.VXD` (W4/DoubleSpace container), apply the TLB patch, and save it as
+`SYSTEM\VMM32\VMM.VXD`. The `cpu-speed-fix` module (NDIS speed test) is in place but alone doesn't
+fix this.
 
 ## Milestones
 

@@ -74,6 +74,11 @@ type Op struct {
 	SHA256After  string      `json:"sha256_after,omitempty"`
 	Patches      []BytePatch `json:"patches,omitempty"`
 
+	// file.pattern: hex bytes with "??" wildcards; every match of Find is
+	// rewritten with Replace ("??" keeps the byte).
+	Find    string `json:"find,omitempty"`
+	Replace string `json:"replace,omitempty"`
+
 	// ini.*
 	Section string  `json:"section,omitempty"`
 	Key     string  `json:"key,omitempty"`
@@ -105,7 +110,7 @@ var (
 )
 
 var OpTypes = []string{
-	"file.copy", "file.delete", "file.delta", "file.bytes",
+	"file.copy", "file.delete", "file.delta", "file.bytes", "file.pattern",
 	"ini.set", "ini.add", "ini.delete",
 	"lines.block", "lines.remove_block", "lines.edit",
 	"reg.set", "reg.delete",
@@ -349,6 +354,16 @@ func (m *Module) validateOp(op Op) error {
 			}
 		}
 		return nil
+	case "file.pattern":
+		if err := need(op.File, "file"); err != nil {
+			return err
+		}
+		f, err1 := ParsePattern(op.Find)
+		r, err2 := ParsePattern(op.Replace)
+		if err1 != nil || err2 != nil || len(f) == 0 || len(f) != len(r) {
+			return fmt.Errorf("find/replace must be equal-length hex patterns (?? = any byte)")
+		}
+		return nil
 	case "ini.set", "ini.add":
 		if op.File == "" || op.Section == "" || op.Key == "" || op.Value == nil {
 			return fmt.Errorf("file, section, key and value are required")
@@ -567,6 +582,33 @@ func Resolve(all map[string]*Module, wanted []string) ([]*Module, error) {
 			sort.Strings(rest)
 			return nil, fmt.Errorf("ordering cycle (requires/after) among: %s", strings.Join(rest, ", "))
 		}
+	}
+	return out, nil
+}
+
+// PatternByte is one byte of a file.pattern; Any matches (or keeps) any byte.
+type PatternByte struct {
+	B   byte
+	Any bool
+}
+
+// ParsePattern reads "29 C9 ?? 20" style hex (spaces optional).
+func ParsePattern(s string) ([]PatternByte, error) {
+	s = strings.Join(strings.Fields(s), "")
+	if len(s)%2 != 0 {
+		return nil, fmt.Errorf("pattern has an odd number of digits")
+	}
+	out := make([]PatternByte, 0, len(s)/2)
+	for i := 0; i < len(s); i += 2 {
+		if s[i:i+2] == "??" {
+			out = append(out, PatternByte{Any: true})
+			continue
+		}
+		b, err := hex.DecodeString(s[i : i+2])
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, PatternByte{B: b[0]})
 	}
 	return out, nil
 }
