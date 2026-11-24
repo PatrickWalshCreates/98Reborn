@@ -30,10 +30,7 @@ func InspectFAT(r io.ReaderAt, p *Part) {
 	}
 	has := func(path string) bool { _, err := v.Stat(path); return err == nil }
 	switch {
-	case has("EFI/Microsoft/Boot/bootmgfw.efi"):
-		p.FS, p.OS = "efi", "Windows Boot Manager"
-	case has("EFI"):
-		p.FS = "efi"
+	// Windows 98 first: 98Reborn Boot puts an EFI folder on its partition.
 	case has("WINDOWS/WIN.COM") && has("IO.SYS"):
 		p.OS = "Windows 9x"
 		if b, err := v.ReadFile("MSDOS.SYS"); err == nil && strings.Contains(string(b), "WinVer=4.10.2222") {
@@ -41,6 +38,10 @@ func InspectFAT(r io.ReaderAt, p *Part) {
 		}
 	case has("IO.SYS") || has("IBMBIO.COM"):
 		p.OS = "DOS"
+	case has("EFI/Microsoft/Boot/bootmgfw.efi"):
+		p.FS, p.OS = "efi", "Windows Boot Manager"
+	case has("EFI"):
+		p.FS = "efi"
 	}
 }
 

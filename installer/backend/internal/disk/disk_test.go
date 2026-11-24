@@ -150,3 +150,19 @@ func TestWin98Detection(t *testing.T) {
 		t.Fatalf("%+v", d.Parts[0])
 	}
 }
+
+// A Windows 98 partition carrying 98Reborn Boot's EFI folder is still Windows 98.
+func TestWin98WithEFIFolder(t *testing.T) {
+	g := filepath.Join("..", "..", "..", "..", "lab", "acpi", "disk.img")
+	f, err := os.Open(g)
+	if err != nil {
+		t.Skip("no ACPI test disk")
+	}
+	defer f.Close()
+	st, _ := f.Stat()
+	d := &Disk{Name: "acpi", Size: st.Size()}
+	Inspect(f, d)
+	if len(d.Parts) != 1 || d.Parts[0].OS != "Windows 98 SE" || d.Parts[0].FS != "fat32" {
+		t.Fatalf("%+v", *d.Parts[0])
+	}
+}
