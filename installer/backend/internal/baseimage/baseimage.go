@@ -61,6 +61,7 @@ var modulePrefixes = []string{
 	"drivers/net/mii.", "drivers/net/virtio_net.", "drivers/net/net_failover.",
 	"drivers/virtio/", "drivers/block/virtio_blk.", "drivers/block/loop.",
 	"drivers/pci/controller/vmd.",
+	"drivers/gpu/drm/tiny/simpledrm.", "drivers/video/fbdev/", // the firmware framebuffer only (simpledrm, efifb, vesafb): real GPU drivers would replace it mid-install
 	"fs/isofs/", "fs/fat/", "fs/exfat/", "fs/nls/", "fs/udf/", "fs/ntfs3/", "fs/overlayfs/",
 	"fs/ext4/", "fs/jbd2/", "fs/btrfs/", "fs/xfs/", // recognizing installed Linux systems
 	"arch/x86/kvm/", "net/packet/",
@@ -153,7 +154,9 @@ func Build(o Options) error {
 		return err
 	}
 
-	syslinuxCfg := []byte("DEFAULT 98reborn\nPROMPT 0\nTIMEOUT 0\nLABEL 98reborn\n  KERNEL /boot/vmlinuz\n  INITRD /boot/initrd.gz\n  APPEND " + cmdline + "\n")
+	// On BIOS PCs a VESA mode (1024x768, true color) gives the graphical
+	// installer its framebuffer; UEFI firmware already provides one.
+	syslinuxCfg := []byte("DEFAULT 98reborn\nPROMPT 0\nTIMEOUT 0\nLABEL 98reborn\n  KERNEL /boot/vmlinuz\n  INITRD /boot/initrd.gz\n  APPEND " + cmdline + " vga=0x318\n")
 	loaderConf := []byte("timeout 0\ndefault 98reborn.conf\nconsole-mode keep\n")
 	entry := []byte("title 98Reborn Installer\nlinux /boot/vmlinuz\ninitrd /boot/initrd.gz\noptions " + cmdline + "\n")
 	baseJSON, _ := json.MarshalIndent(map[string]string{

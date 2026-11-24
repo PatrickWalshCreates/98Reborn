@@ -58,7 +58,8 @@ Windows. The installer finds `98SE/` on the medium it booted from.
 | Installer UI (the same web UI in a kiosk browser on the live system) | Next |
 | Hybrid USB boot (raw copy with Etcher / `dd`) | Done |
 | Built-in USB writer in the Tool | Later |
-| Graphical installer screens (today: text mode) | Next |
+| Graphical installer (`internal/gui`, `internal/installui`): KMS display, keyboard and mouse, BIOS and UEFI | Done (text screens remain as fallback) |
+| 98Reborn Boot on the Windows 98 partition + UEFI boot entry | Done ([BOOT.md](BOOT.md)) |
 
 ## Using the Tool
 
@@ -148,6 +149,21 @@ disk.
 - **Boot entries:** the installer adds its own UEFI boot entry and never edits other systems' entries.
   The user chooses which one is the default.
 - **Legacy BIOS PCs:** the same menu runs as boot-sector code.
+
+## The graphical installer
+
+The installer draws its own screens instead of running a web browser on the medium (which would add
+well over 100 MB):
+- **Look:** a wizard in the spirit of Windows 98 Setup (stages on the left), in 98Reborn's colors,
+  with the Terminus font.
+- **Display:** through KMS on `/dev/dri/card0`, which works with the firmware framebuffer driver
+  (`simpledrm`) on BIOS (a 1024x768 VESA mode set at boot) and UEFI (the firmware's resolution).
+  The legacy `/dev/fb0` path is a fallback.
+- **Input:** evdev keyboards (US layout), mice, touchpads and tablets. Everything works from the
+  keyboard: Tab, arrows, Space, and Enter for Next.
+- **While Setup runs:** the installer shows Setup's own screen in a little monitor.
+- **Previews:** `go run ./cmd/98reborn-ui-preview --out DIR` renders every screen with sample data to
+  PNG, on any OS.
 
 ## Why a local web UI
 

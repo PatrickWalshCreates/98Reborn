@@ -52,6 +52,15 @@ func main() {
 		shell()
 	}
 
+	// The graphical installer, when the PC has a framebuffer; the text
+	// screens otherwise (and in automated tests).
+	if !auto {
+		if runGUI() {
+			fmt.Fprintln(out, "Left the graphical installer.")
+			finish(false, 0)
+		}
+	}
+
 	banner()
 	step("Starting hardware")
 	coldplug()

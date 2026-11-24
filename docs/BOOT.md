@@ -25,33 +25,66 @@ and the same menu is available as boot-sector code.
 
 ## Disk layout
 
-Windows 98 only understands MBR partition tables. UEFI firmware can boot from MBR disks too: it looks
-for a partition of type `0xEF` (EFI System). A disk set up for 98 on a UEFI-only PC therefore looks
-like this:
+Windows 98 only understands MBR partition tables. UEFI firmware boots from MBR disks too, and starts
+`\EFI\BOOT\BOOTX64.EFI` from a FAT partition, so 98Reborn Boot lives **on the Windows 98 partition
+itself**. No extra partition is needed:
 
-| # | Type | Size | Contents |
-|---|---|---|---|
-| 1 | `0x0C` FAT32 (LBA), active | 8–127 GB | Windows 98 (`C:`) |
-| 2 | `0xEF` EFI System (FAT) | 64 MB | 98Reborn Boot, branding, settings |
+```
+C:\EFI\BOOT\BOOTX64.EFI      98Reborn Boot (the menu)
+C:\EFI\98REBORN\REBIOS.EFI   BIOS layer (needs VT-x/AMD-V + IOMMU)
+C:\EFI\98REBORN\CSMWRAP.EFI  BIOS layer for PCs without them
+C:\EFI\98REBORN\BOOT.CFG     menu settings
+```
 
-Windows 98 ignores partition 2. On GPT disks shared with Windows 11 or Linux, see the multi-boot
-section in TOOL.md for the options.
+On GPT disks shared with Windows 11 or Linux, see the multi-boot section in TOOL.md for the options.
 
-## Why build on SeaBIOS / CSMWrap
+## The BIOS layer: ReBIOS first, CSMWrap as the fallback
 
-- **SeaBIOS is mature.** It's the BIOS in QEMU, used across countless VMs and coreboot boards.
-- **CSMWrap** already shows that SeaBIOS can run as a UEFI application on real class-3 machines.
-- **One codebase for NVMe boot.** The NVMe INT 13h work in [NVME.md](NVME.md) (milestone N1) lands in
-  the same SeaBIOS that 98Reborn Boot ships. Fixing NVMe boot once fixes it for both QEMU and real UEFI PCs.
+- **ReBIOS** (GPL-2.0) runs SeaBIOS and the legacy OS under a minimal hypervisor (VT-x/AMD-V plus an
+  IOMMU), and adds back what modern PCs dropped:
+  - ACPI tables that Windows 98 understands, so it installs with ACPI (power button, fans, thermal limits)
+  - a complete emulated VGA with VESA modes up to the screen's resolution, even on graphics with no
+    video BIOS
+  - virtual 8259 and xAPIC interrupt controllers
+  - a clean CPU state at handoff
 
-Before we fork, we'll check the license of each component and keep upstream attribution.
+  It's the successor to CSMWrap, by the same authors, and our default.
+- **CSMWrap** (LGPL-2.1) puts SeaBIOS directly on the hardware. It's deprecated, but it needs no
+  virtualization, so it's the fallback for PCs without VT-x or an IOMMU.
+- **Installation:** both are shipped unmodified, pinned by SHA-256 (`internal/baseimage/vendor.go`),
+  with a NOTICE of their licenses and sources. The installer puts them in `\EFI\98REBORN` on the
+  Windows 98 partition. ReBIOS returns to the menu when the PC can't run it, and the menu then tries
+  CSMWrap.
+- **NVMe:** the NVMe INT 13h work in [NVME.md](NVME.md) lands in SeaBIOS, which both layers run.
+
+## The menu (`installer/boot`)
+
+A small UEFI program in C (built with clang and lld, no EFI SDK: `src/efi.h` has the definitions it
+uses):
+- **Look:** draws the 98Reborn look on the firmware's framebuffer with the Terminus font. Falls back to
+  text if there's no graphics output.
+- **Entries:** Windows 98, plus Windows Boot Manager and Linux loaders (`shim`, GRUB, systemd-boot) it
+  finds on every disk. Then firmware setup and power off.
+- **Settings:** in `\EFI\98REBORN\BOOT.CFG`: `timeout`, `default`, and `engine` (auto, rebios,
+  csmwrap).
+- **Firmware entry:** on UEFI PCs the installer adds a "98Reborn Boot" firmware boot entry
+  (`efibootmgr`) and leaves other systems' entries alone.
+
+## Tested so far (QEMU + OVMF with no CSM, i.e. a "class 3" UEFI PC)
+
+| Check | Result |
+|---|---|
+| Menu draws, finds Windows Boot Manager and an Ubuntu loader on a second disk | Works |
+| Windows 98 entry starts ReBIOS, which declines (no VT-x in plain QEMU) and returns | Works |
+| Fallback starts CSMWrap, SeaBIOS boots the disk's MBR, "Starting Windows 98..." | Works |
+| Windows 98 reaches the desktop under CSMWrap in QEMU | **No:** `IO.SYS` stops early (A20 stays off, the vector table gets overwritten). Real CPUs since Haswell ignore A20, so this may be emulation-only; needs a real PC |
+| Windows 98 under ReBIOS | Needs VT-x emulation (Nephrite, ReBIOS's QEMU fork) or a real PC |
 
 ## Milestones
 
-| | Milestone | Done when |
+| | Milestone | Status |
 |---|---|---|
-| **B0** | Prototype | Builds in CI; boots the lab's golden 98 SE image from an MBR disk with an ESP in QEMU + OVMF (no CSM) |
-| **B1** | Branded | 98Reborn boot screen and menu; settings file on the ESP; quiet by default |
-| **B2** | Installer integration | Installer creates the ESP, installs 98Reborn Boot, and registers it in UEFI boot entries without touching other OSes' entries |
-| **B3** | NVMe | Boots 98 from NVMe via our INT 13h path (NVME.md N1) |
-| **B4** | Real hardware | Boots on 3+ UEFI-only PCs (Intel and AMD, desktop and laptop) |
+| **B0** | Menu + both BIOS layers, built in CI, installed by the installer | Done |
+| **B1** | Windows 98 to the desktop on UEFI-only firmware (ReBIOS under Nephrite, then real PCs) | Next |
+| **B2** | NVMe boot through the same SeaBIOS (NVME.md N1) | Planned |
+| **B3** | 3+ real UEFI-only PCs (Intel and AMD, desktop and laptop) | Planned |
