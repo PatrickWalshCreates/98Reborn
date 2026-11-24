@@ -210,8 +210,9 @@ GitHub Pages (Astro or plain static) in `site/`:
    lab (3–5 machines covering the tiers).
 6. **Rollback everywhere:** installer writes a restore point before tuning; Control Center snapshots
    before every change.
-7. **Dual-boot:** many users will want this alongside Windows 11 or Linux. Use a chainloader and keep 98
-   on its own MBR disk where possible.
+7. **Multi-boot:** many users will want this alongside Windows 11 or Linux. The installer's smart
+   partitioner and the 98Reborn Boot menu handle it: see [TOOL.md](TOOL.md#installing-alongside-other-operating-systems)
+   and [BOOT.md](BOOT.md).
 8. **Keyboard and mouse:** USB HID under DOS and 98 on xHCI-only boards relies on BIOS legacy USB
    emulation. If that's missing, input dies. Detect this in the compatibility report.
 9. **Licence matrix and attribution** for every third-party module.
@@ -241,9 +242,10 @@ GitHub Pages (Astro or plain static) in `site/`:
    project with its own plan: [NVME.md](NVME.md).
 1. **USB 3 / xHCI driver:** needed on boards without USB 2 ports or legacy emulation. A real
    VxD/WDM driver project: start research in Phase 0 and check current MSFN community efforts first.
-2. **3D on modern GPUs:** if SoftGPU's software rendering isn't fast enough, the Gaming edition
-   effectively requires a period GPU. Benchmark in Phase 0.
-3. **CSMWrap reliability** on class-3 UEFI machines.
+2. **3D on modern GPUs:** four tracks, from software 3D to Turbo mode (GPU passthrough through a
+   thin host) to native drivers: [GPU.md](GPU.md).
+3. **Booting on UEFI-only PCs:** our own branded loader, 98Reborn Boot, built on SeaBIOS/CSMWrap:
+   [BOOT.md](BOOT.md).
 4. **Licensing** of key community patches (especially R. Loew's, given he passed away in 2019).
    Contact rights holders early; plan clean-room replacements for anything we can't redistribute.
 

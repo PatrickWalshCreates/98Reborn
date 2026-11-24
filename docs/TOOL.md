@@ -32,7 +32,8 @@ Windows. The installer finds `98SE/` on the medium it booted from.
    unsupported devices. Everything on the medium still works.
 3. **Compatibility check** of this exact machine (the same rules as the Tool), shown as the grade with reasons,
    plus BIOS settings to change (CSM, SATA mode, Secure Boot).
-4. **Choose:** edition (Core / Gaming), target disk, keep or replace partitions.
+4. **Choose:** edition (Core / Gaming) and where to install: a whole disk, free space, or space shrunk
+   from an existing partition next to other operating systems (see below).
 5. **Install:** partition and format the disk (our FAT32 code), copy `98SE/` to `C:\WIN98`, and run
    Windows 98 Setup unattended inside a minimal virtual machine with the real disk attached. This is the
    same approach the lab uses, so Setup always sees simple, known hardware.
@@ -47,11 +48,78 @@ Windows. The installer finds `98SE/` on the medium it booted from.
 | Reading the user's CD (`iso9660`, `cab`, `media`) | Done |
 | FAT32, partitioning, patching disk images (`fat`, `engine`) | Done |
 | Unattended Setup in a VM + verification (`lab`) | Done, needs a "real disk" mode |
-| **ISO writer** (ISO 9660 + Joliet + El Torito, BIOS and UEFI) | In progress |
-| Base installer image (Linux, kernel, QEMU, installer app), built in CI | Next |
+| **ISO writer** (ISO 9660 + Joliet + El Torito, BIOS and UEFI) | Done |
+| Base installer image (Alpine Linux, kernel 6.18 LTS, QEMU, installer), built by `98reborn-mkbase` locally or in CI | Done: boots BIOS and UEFI, CD and USB |
+| Installer first stage: drivers, find medium + `98SE/`, internet (optional, warned), grade, list disks | Done (text mode) |
+| Compose base + your CD into the installer ISO (`w9xm make-installer`) | Done (Tool UI next) |
+| Smart partitioner (multi-boot) | Next |
 | Tool UI (local web UI opened in the browser; one binary per OS) | Next |
 | Installer UI (the same web UI in a kiosk browser on the live system) | Next |
 | Hybrid USB boot (isohybrid MBR/GPT) and a built-in USB writer | Later |
+
+## Building the base image
+
+`98reborn-mkbase` builds the base image from Alpine Linux packages without Docker or Alpine tools, so it
+runs on macOS, Windows and Linux:
+- **Verified downloads:** the package index is checked against Alpine's signing keys, pinned in
+  `internal/apk/keys`. Every package is checked against the signed index.
+- **Small:** only the needed kernel drivers (storage, USB, input, Ethernet, file systems, KVM) and only
+  QEMU's PC firmware go in. The initramfs is about 51 MB, the ISO about 140 MB.
+- **Boots both ways:** ISOLINUX for BIOS, and systemd-boot on a FAT32 EFI image for UEFI. On a USB stick
+  written by Rufus (ISO mode), UEFI uses the same files directly from the stick.
+
+```
+cd installer/backend
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o dist/98reborn-installer-linux-amd64 ./cmd/98reborn-installer
+go run ./cmd/98reborn-mkbase --installer dist/98reborn-installer-linux-amd64 --out 98reborn-base.iso
+go run ./cmd/w9xm make-installer --base 98reborn-base.iso --cd "Windows 98 Second Edition.iso" --out 98Reborn.iso
+```
+
+CI (`.github/workflows/installer-base.yml`) builds the base image on every change, boot-tests it in
+QEMU, and attaches it to tagged releases.
+
+## Installing alongside other operating systems
+
+Windows 98 can share a PC with Windows 10/11, Linux or other systems. The installer's partitioner plans
+this for the user, and changes nothing until they confirm.
+
+**What it detects:**
+- each disk and its partition table (MBR or GPT)
+- installed systems: Windows (NTFS with `\Windows\System32`), Linux (ext4/btrfs/xfs with `os-release`),
+  older DOS/9x installs, and other FAT/exFAT data
+- free space
+- whether partitions can be shrunk safely
+
+**Its choices, best first:**
+1. **A disk of its own** (a second SSD/HDD, or an empty one): cleanest and recommended. It doesn't touch
+   any other disk.
+2. **Free space on an MBR disk:** adds a primary FAT32 partition.
+3. **Shrink a partition on an MBR disk:** NTFS (ntfsresize) or ext4 (resize2fs), checked first, then
+   adds the FAT32 partition in the freed space.
+4. **GPT disk shared with another OS:** Windows 98 can't read GPT. The options are a separate disk
+   (recommended), or a *hybrid MBR* that mirrors the 98 partition. A hybrid MBR is shown as advanced,
+   with a clear warning, because other OSes' disk tools can undo it.
+
+**Windows 98's own rules it applies:**
+- primary FAT32 partition
+- 8–127 GB recommended (larger with the 48-bit LBA module)
+- it should be the first FAT partition on the disk, so that it becomes `C:`
+
+**Safety rules:**
+- **No resize when the partition isn't safe to change:**
+  - BitLocker is on: suspend or decrypt it in Windows first
+  - Windows is hibernated or has Fast Startup on: shut Windows down fully first
+  - the file system has errors
+- **Backups:** partition tables are saved to the installer medium before any change.
+- **Confirmation:** the plan is shown as a before/after picture of the disk, and must be confirmed.
+
+**Booting:**
+- **The menu:** [98Reborn Boot](BOOT.md) shows a menu with every system found. Windows 98 starts
+  through its built-in BIOS layer. Windows 10/11 and Linux start through their own boot loaders,
+  unchanged.
+- **Boot entries:** the installer adds its own UEFI boot entry and never edits other systems' entries.
+  The user chooses which one is the default.
+- **Legacy BIOS PCs:** the same menu runs as boot-sector code.
 
 ## Why a local web UI
 

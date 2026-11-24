@@ -542,7 +542,10 @@ func bootCatalog(o Options, bios, efi *node) ([]byte, error) {
 			if cnt == 0 {
 				s := (n.size + 511) / 512
 				if s > 0xFFFF {
-					s = 0xFFFF
+					// Too big to describe: UEFI firmware (EDK2) treats a count
+					// below 2 as "the rest of the disc" and reads the image's
+					// own FAT header for its size.
+					s = 0
 				}
 				cnt = uint16(s)
 			}

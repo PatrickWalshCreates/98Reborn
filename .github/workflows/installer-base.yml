@@ -1,0 +1,77 @@
+# Builds and tests the Go code, then builds the 98Reborn installer base image
+# (Alpine Linux + the installer; no Microsoft files). On a v* tag the image is
+# attached to the GitHub release, where the 98Reborn Tool downloads it.
+name: Installer base image
+
+on:
+  push:
+    branches: [main]
+    paths: ["installer/backend/**", ".github/workflows/installer-base.yml"]
+    tags: ["v*"]
+  pull_request:
+    paths: ["installer/backend/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: installer/backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: installer/backend/go.mod
+          cache-dependency-path: installer/backend/go.mod
+      - name: Test
+        run: go vet ./... && go test -short ./...
+      - name: Build the installer and the image builder
+        run: |
+          mkdir -p dist
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o dist/98reborn-installer-linux-amd64 ./cmd/98reborn-installer
+          go build -o dist/98reborn-mkbase ./cmd/98reborn-mkbase
+      - name: Build the base image
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          [ "$GITHUB_REF_TYPE" = tag ] || VERSION="0.1.0-dev+${GITHUB_SHA::7}"
+          export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          ./dist/98reborn-mkbase --installer dist/98reborn-installer-linux-amd64 \
+            --version "$VERSION" --cache "$RUNNER_TEMP/apk" --out dist/98reborn-base.iso
+          sha256sum dist/98reborn-base.iso | tee dist/98reborn-base.iso.sha256
+      - name: Boot test (BIOS)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq qemu-system-x86 >/dev/null
+          timeout 600 qemu-system-x86_64 -m 1024 -cdrom dist/98reborn-base.iso -boot d \
+            -nic user,model=e1000 -serial file:boot.log -display none -no-reboot &
+          for i in $(seq 1 120); do grep -q "98REBORN:DONE" boot.log 2>/dev/null && break; sleep 5; done
+          kill %1 || true
+          grep -a "98REBORN:" boot.log
+          grep -q "98REBORN:MEDIUM" boot.log && grep -q "98REBORN:GRADE" boot.log
+      - uses: actions/upload-artifact@v7
+        with:
+          name: 98reborn-base
+          path: |
+            installer/backend/dist/98reborn-base.iso
+            installer/backend/dist/98reborn-base.iso.sha256
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: 98reborn-base
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
+            gh release create "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --prerelease --title "98Reborn $GITHUB_REF_NAME" --notes "Installer base image. Use the 98Reborn Tool to build your installer from it."
+          gh release upload "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --clobber 98reborn-base.iso 98reborn-base.iso.sha256
