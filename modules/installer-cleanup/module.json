@@ -1,0 +1,11 @@
+{
+  "id": "installer-cleanup",
+  "name": "Installer cleanup",
+  "version": "1.0.0",
+  "description": "Removes the startup entry the 98Reborn installer uses to detect the end of Windows Setup. Applied automatically by the installer.",
+  "category": "system",
+  "license": "MIT",
+  "ops": [
+    { "op": "reg.delete", "path": "HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run", "name": "W9XMReady" }
+  ]
+}

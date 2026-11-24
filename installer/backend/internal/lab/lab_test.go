@@ -66,7 +66,7 @@ func TestBuildFromCD(t *testing.T) {
 	dir := t.TempDir()
 
 	floppy := filepath.Join(dir, "a.img")
-	if err := buildFloppy(m, floppy); err != nil {
+	if err := buildFloppy(ISOSource(m), floppy); err != nil {
 		t.Fatal(err)
 	}
 	fh, _ := os.Open(floppy)
@@ -89,7 +89,7 @@ func TestBuildFromCD(t *testing.T) {
 	fh.Close()
 
 	disk := filepath.Join(dir, "c.img")
-	if err := buildInstallDisk(m, disk, 2048<<20, "ABCDE-12345-ABCDE-12345-ABCDE"); err != nil {
+	if err := buildInstallDisk(ISOSource(m), disk, 63, 2048<<11-63, 2048<<20, "ABCDE-12345-ABCDE-12345-ABCDE", LabAnswers); err != nil {
 		t.Fatal(err)
 	}
 	fh, _ = os.Open(disk)

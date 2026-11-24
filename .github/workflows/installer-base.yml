@@ -28,7 +28,9 @@ jobs:
           go-version-file: installer/backend/go.mod
           cache-dependency-path: installer/backend/go.mod
       - name: Test
-        run: go vet ./... && go test -short ./...
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ntfs-3g e2fsprogs qemu-system-x86 >/dev/null
+          go vet ./... && go test -short ./...
       - name: Build the installer and the image builder
         run: |
           mkdir -p dist
@@ -44,7 +46,6 @@ jobs:
           sha256sum dist/98reborn-base.iso | tee dist/98reborn-base.iso.sha256
       - name: Boot test (BIOS)
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq qemu-system-x86 >/dev/null
           timeout 600 qemu-system-x86_64 -m 1024 -cdrom dist/98reborn-base.iso -boot d \
             -nic user,model=e1000 -serial file:boot.log -display none -no-reboot &
           for i in $(seq 1 120); do grep -q "98REBORN:DONE" boot.log 2>/dev/null && break; sleep 5; done

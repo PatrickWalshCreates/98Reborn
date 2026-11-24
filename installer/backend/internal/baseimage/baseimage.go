@@ -13,8 +13,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -29,6 +31,8 @@ import (
 type Options struct {
 	Client    *apk.Client
 	Installer string // path to the linux/amd64 98reborn-installer binary
+	Modules   string // modules/ directory (copied to 98reborn/modules)
+	Editions  string // editions/ directory (copied to 98reborn/editions)
 	Out       string // output ISO
 	Version   string // 98Reborn version, e.g. 0.1.0-dev
 	Now       time.Time
@@ -36,7 +40,8 @@ type Options struct {
 }
 
 // Packages in the live system. Their dependencies are added automatically.
-var rootPackages = []string{"busybox", "busybox-binsh", "musl", "kmod", "qemu-system-i386", "ca-certificates-bundle"}
+var rootPackages = []string{"busybox", "busybox-binsh", "musl", "kmod", "qemu-system-i386", "ca-certificates-bundle",
+	"ntfs-3g-progs", "e2fsprogs"} // shrinking Windows / Linux partitions for multi-boot
 
 // Dependencies we leave out on purpose (boot-time tooling of a normal Alpine).
 var skipDeps = map[string]bool{"initramfs-generator": true, "mkinitfs": true, "linux-firmware-any": true}
@@ -55,6 +60,7 @@ var modulePrefixes = []string{
 	"drivers/virtio/", "drivers/block/virtio_blk.", "drivers/block/loop.",
 	"drivers/pci/controller/vmd.",
 	"fs/isofs/", "fs/fat/", "fs/exfat/", "fs/nls/", "fs/udf/", "fs/ntfs3/", "fs/overlayfs/",
+	"fs/ext4/", "fs/jbd2/", "fs/btrfs/", "fs/xfs/", // recognizing installed Linux systems
 	"arch/x86/kvm/", "net/packet/",
 }
 
@@ -172,6 +178,23 @@ func Build(o Options) error {
 	}
 	for k, v := range espFiles {
 		files[k] = v
+	}
+	for dir, dst := range map[string]string{o.Modules: "98reborn/modules", o.Editions: "98reborn/editions"} {
+		if dir == "" {
+			continue
+		}
+		err := filepath.WalkDir(dir, func(p string, e fs.DirEntry, err error) error {
+			if err != nil || e.IsDir() {
+				return err
+			}
+			b, err := os.ReadFile(p)
+			rel, _ := filepath.Rel(dir, p)
+			files[dst+"/"+filepath.ToSlash(rel)] = b
+			return err
+		})
+		if err != nil {
+			return err
+		}
 	}
 	return writeISO(o.Out, files, o.Now)
 }

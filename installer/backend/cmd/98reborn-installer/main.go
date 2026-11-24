@@ -95,16 +95,12 @@ func main() {
 	}
 
 	disks := listDisks(med.Dev)
-	step("Disks in this PC")
-	if len(disks) == 0 {
-		warn("No internal disk found. If the disk is NVMe or behind RAID/RST, see the report above.")
-	}
-	for _, d := range disks {
-		fmt.Fprintf(out, "      %-10s %8s  %s\n", d.Name, human(d.Size), d.Model)
-	}
 	marker(fmt.Sprintf("DISKS %d", len(disks)))
-	fmt.Fprintln(out)
-	info("Installing from this screen comes in the next installer build.")
+	if med.Setup == "" {
+		warn("Without the Windows 98 SE setup files this medium can only check PCs.")
+	} else {
+		installFlow(med, rep, auto)
+	}
 	marker("DONE")
 	finish(auto, 0)
 }
@@ -418,13 +414,13 @@ func network(auto bool) bool {
 
 // ---------- disks ----------
 
-type disk struct {
+type sysDisk struct {
 	Name, Model string
 	Size        int64
 }
 
-func listDisks(skip string) []disk {
-	var out []disk
+func listDisks(skip string) []sysDisk {
+	var out []sysDisk
 	ents, _ := os.ReadDir("/sys/block")
 	for _, e := range ents {
 		n := e.Name()
@@ -438,7 +434,7 @@ func listDisks(skip string) []disk {
 			continue
 		}
 		model, _ := os.ReadFile("/sys/block/" + n + "/device/model")
-		out = append(out, disk{Name: n, Model: strings.TrimSpace(string(model)), Size: sectors * 512})
+		out = append(out, sysDisk{Name: n, Model: strings.TrimSpace(string(model)), Size: sectors * 512})
 	}
 	return out
 }

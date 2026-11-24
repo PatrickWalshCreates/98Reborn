@@ -6,7 +6,7 @@ plus a built-in **Control Center** for specs, monitoring and updates. Core and G
 **Bring your own Windows:** this project ships no Microsoft code. You supply your own 98 SE CD/ISO and key;
 the installer patches it locally.
 
-- Plan & architecture: [docs/PLAN.md](docs/PLAN.md) · NVMe driver plan: [docs/NVME.md](docs/NVME.md) · Tool and installer: [docs/TOOL.md](docs/TOOL.md) · UEFI boot: [docs/BOOT.md](docs/BOOT.md) · 3D on modern GPUs: [docs/GPU.md](docs/GPU.md)
+- Plan & architecture: [docs/PLAN.md](docs/PLAN.md) · NVMe driver plan: [docs/NVME.md](docs/NVME.md) · Tool and installer: [docs/TOOL.md](docs/TOOL.md) · UEFI boot: [docs/BOOT.md](docs/BOOT.md) · 3D on modern GPUs: [docs/GPU.md](docs/GPU.md) · Modernizing the core (storage, memory, CPU): [docs/CORE.md](docs/CORE.md)
 - **PC compatibility scanner:** `98reborn-check` (Windows 10/11 or Linux, no admin rights, nothing is changed
   or sent anywhere) grades a PC Gold / Silver / Bronze / In development / Not supported, with the reasons
   why. Build it with `installer/backend/scripts/build-all.sh`. The rules are data:

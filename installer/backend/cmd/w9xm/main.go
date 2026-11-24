@@ -38,6 +38,7 @@ Usage:
   w9xm lab      finalize --iso 98SE.ISO [--out DIR]   (recover an interrupted install)
   w9xm lab      test (--edition E | --module ID ...) [--out DIR] [--show]
   w9xm make-installer --base BASE.ISO --cd 98SE.ISO --out 98Reborn.iso
+  w9xm install-disk --disk DISK.IMG --cd 98SE.ISO [--plan] [--option N] [--edition E] [--accept-eula]
   w9xm delta    make ORIGINAL PATCHED OUT.w9xd
   w9xm delta    apply ORIGINAL PATCH OUT
   w9xm delta    info PATCH
@@ -100,6 +101,8 @@ func main() {
 		err = cmdLab(args)
 	case "make-installer":
 		err = cmdMakeInstaller(args)
+	case "install-disk":
+		err = cmdInstallDisk(args)
 	case "version", "--version":
 		fmt.Println(version)
 	case "help", "-h", "--help":

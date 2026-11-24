@@ -246,7 +246,8 @@ GitHub Pages (Astro or plain static) in `site/`:
    thin host) to native drivers: [GPU.md](GPU.md).
 3. **Booting on UEFI-only PCs:** our own branded loader, 98Reborn Boot, built on SeaBIOS/CSMWrap:
    [BOOT.md](BOOT.md).
-4. **Licensing** of key community patches (especially R. Loew's, given he passed away in 2019).
+4. **Core limits (storage, memory, CPU)** and the "no yellow triangles" test: [CORE.md](CORE.md).
+5. **Licensing** of key community patches (especially R. Loew's, given he passed away in 2019).
    Contact rights holders early; plan clean-room replacements for anything we can't redistribute.
 
 ## 6. Open decisions

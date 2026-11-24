@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,6 +24,8 @@ const (
 	BIOSBoot = "boot/syslinux/isolinux.bin"
 	EFIBoot  = "boot/efi.img"
 	BaseInfo = "98reborn/base.json"
+	// BootFloppy is the CD's El Torito boot floppy, copied by Compose.
+	BootFloppy = "98reborn/cdboot.img"
 )
 
 type Options struct {
@@ -99,11 +102,18 @@ func Compose(o Options) error {
 	if err != nil {
 		return err
 	}
+	// The CD's boot floppy: the installer boots Setup's VM from it.
+	floppy, _, err := cd.ISO.ReadBootImage()
+	if err != nil {
+		return fmt.Errorf("your CD: boot image: %w", err)
+	}
+	files = append(files, isowriter.File{Path: BootFloppy, Size: int64(len(floppy)), ModTime: o.Now,
+		Open: func() (io.ReadCloser, error) { return io.NopCloser(bytes.NewReader(floppy)), nil }})
 	info, _ := json.MarshalIndent(MediaInfo{Product: string(cd.Product), SetupSHA256: cd.SetupSHA256,
-		Files: len(files) - nBase, Composed: o.Now.Format(time.RFC3339)}, "", "  ")
+		Files: len(files) - nBase - 1, Composed: o.Now.Format(time.RFC3339)}, "", "  ")
 	files = append(files, isowriter.File{Path: "98reborn/media.json", Size: int64(len(info)), ModTime: o.Now,
 		Open: func() (io.ReadCloser, error) { return io.NopCloser(strings.NewReader(string(info))), nil }})
-	logf("base: %d files; your CD: %d setup files from %s", nBase, len(files)-nBase-1, path.Clean(cd.SetupDir))
+	logf("base: %d files; your CD: %d setup files from %s", nBase, len(files)-nBase-2, path.Clean(cd.SetupDir))
 
 	f, err := os.Create(o.Out)
 	if err != nil {

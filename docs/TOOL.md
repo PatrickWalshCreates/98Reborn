@@ -52,7 +52,8 @@ Windows. The installer finds `98SE/` on the medium it booted from.
 | Base installer image (Alpine Linux, kernel 6.18 LTS, QEMU, installer), built by `98reborn-mkbase` locally or in CI | Done: boots BIOS and UEFI, CD and USB |
 | Installer first stage: drivers, find medium + `98SE/`, internet (optional, warned), grade, list disks | Done (text mode) |
 | Compose base + your CD into the installer ISO (`w9xm make-installer`) | Done (Tool UI next) |
-| Smart partitioner (multi-boot) | Next |
+| Smart partitioner (multi-boot): detect systems, plan, shrink NTFS/ext4, add the partition | Done (text mode) |
+| Install to the real disk: Setup in a VM on a scratch image, patch, copy only used data into place | Done |
 | Tool UI (local web UI opened in the browser; one binary per OS) | Next |
 | Installer UI (the same web UI in a kiosk browser on the live system) | Next |
 | Hybrid USB boot (isohybrid MBR/GPT) and a built-in USB writer | Later |
@@ -100,9 +101,18 @@ this for the user, and changes nothing until they confirm.
    (recommended), or a *hybrid MBR* that mirrors the 98 partition. A hybrid MBR is shown as advanced,
    with a clear warning, because other OSes' disk tools can undo it.
 
+**How the install touches the disk:** Windows Setup never sees the real disk. It runs in a VM against a
+sparse scratch image whose partition has exactly the position and size of the planned one. After the
+edition's modules are applied, any shrink happens. Only the used parts of the finished partition are then
+copied into place, and the new partition entry is written last. Other partitions, the MBR boot code and
+the gap after the MBR (where GRUB lives) are never written, except when the user chose to erase the whole
+disk.
+
 **Windows 98's own rules it applies:**
 - primary FAT32 partition
-- 8–127 GB recommended (larger with the 48-bit LBA module)
+- 32 GB by default, 2 GB minimum
+- the partition must end within the first 128 GB of the disk, until 98Reborn's 48-bit LBA driver ships
+  ([CORE.md](CORE.md))
 - it should be the first FAT partition on the disk, so that it becomes `C:`
 
 **Safety rules:**

@@ -23,6 +23,8 @@ func main() {
 	mirror := flag.String("mirror", "https://dl-cdn.alpinelinux.org/alpine", "Alpine mirror")
 	branch := flag.String("alpine", "v3.24", "Alpine branch")
 	cache := flag.String("cache", "", "package cache (default: user cache dir)")
+	modules := flag.String("modules", "../../modules", "modules directory")
+	editions := flag.String("editions", "../../editions", "editions directory")
 	flag.Parse()
 	if *installer == "" {
 		flag.Usage()
@@ -41,7 +43,7 @@ func main() {
 	}
 	err := baseimage.Build(baseimage.Options{
 		Client:    &apk.Client{Mirror: *mirror, Branch: *branch, Arch: "x86_64", Cache: *cache, Log: logf},
-		Installer: *installer, Out: *out, Version: *version, Now: now, Log: logf,
+		Installer: *installer, Modules: *modules, Editions: *editions, Out: *out, Version: *version, Now: now, Log: logf,
 	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "98reborn-mkbase:", err)
