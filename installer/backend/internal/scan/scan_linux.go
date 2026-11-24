@@ -41,6 +41,14 @@ func run() (*compat.Scan, error) {
 			if k == "model name" && s.CPU == "" {
 				s.CPU = v
 			}
+			if k == "flags" && s.Virtualization == "" {
+				s.Virtualization = "off"
+				for _, fl := range strings.Fields(v) {
+					if fl == "vmx" || fl == "svm" {
+						s.Virtualization = "on"
+					}
+				}
+			}
 			if k == "cpu MHz" && s.CPUMHz == 0 {
 				mhz, _ := strconv.ParseFloat(v, 64)
 				s.CPUMHz = int(mhz)
@@ -57,6 +65,14 @@ func run() (*compat.Scan, error) {
 		if v, ok := strings.CutPrefix(l, "MemTotal:"); ok {
 			kb, _ := strconv.Atoi(strings.Fields(v)[0])
 			s.RAMMB = kb / 1024
+		}
+	}
+	// An IOMMU shows up as an ACPI table (Intel DMAR, AMD IVRS) when the
+	// firmware has it switched on.
+	s.IOMMU = "off"
+	for _, t := range []string{"/sys/firmware/acpi/tables/DMAR", "/sys/firmware/acpi/tables/IVRS"} {
+		if _, err := os.Stat(t); err == nil {
+			s.IOMMU = "on"
 		}
 	}
 	s.Firmware, s.SecureBoot = "bios", "unknown"

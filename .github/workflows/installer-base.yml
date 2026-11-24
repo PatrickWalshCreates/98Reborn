@@ -6,10 +6,10 @@ name: Installer base image
 on:
   push:
     branches: [main]
-    paths: ["installer/backend/**", ".github/workflows/installer-base.yml"]
+    paths: ["installer/**", "modules/**", "editions/**", ".github/workflows/installer-base.yml"]
     tags: ["v*"]
   pull_request:
-    paths: ["installer/backend/**"]
+    paths: ["installer/**", "modules/**", "editions/**"]
   workflow_dispatch:
 
 permissions:
@@ -29,8 +29,10 @@ jobs:
           cache-dependency-path: installer/backend/go.mod
       - name: Test
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq ntfs-3g e2fsprogs qemu-system-x86 >/dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq ntfs-3g e2fsprogs qemu-system-x86 clang lld >/dev/null
           go vet ./... && go test -short ./...
+      - name: Build 98Reborn Boot (UEFI)
+        run: sh ../boot/build.sh
       - name: Build the installer and the image builder
         run: |
           mkdir -p dist

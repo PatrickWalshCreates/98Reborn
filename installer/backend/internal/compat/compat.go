@@ -55,15 +55,20 @@ type Device struct {
 
 // Scan is everything the scanner collected.
 type Scan struct {
-	OS         string   `json:"os"`
-	Arch       string   `json:"arch"` // x86_64, x86, arm64
-	CPU        string   `json:"cpu"`
-	CPUMHz     int      `json:"cpu_mhz"`
-	RAMMB      int      `json:"ram_mb"`
-	Firmware   string   `json:"firmware"`    // bios (legacy boot) | uefi | unknown
-	SecureBoot string   `json:"secure_boot"` // on | off | unknown
-	PCI        []Device `json:"pci"`
-	Disks      []Disk   `json:"disks"`
+	OS         string `json:"os"`
+	Arch       string `json:"arch"` // x86_64, x86, arm64
+	CPU        string `json:"cpu"`
+	CPUMHz     int    `json:"cpu_mhz"`
+	RAMMB      int    `json:"ram_mb"`
+	Firmware   string `json:"firmware"`    // bios (legacy boot) | uefi | unknown
+	SecureBoot string `json:"secure_boot"` // on | off | unknown
+	// Hardware virtualization (VT-x/AMD-V) and IOMMU (VT-d/AMD-Vi), as the
+	// firmware has them set: on | off | "" (unknown). 98Reborn Boot's best
+	// BIOS layer (ReBIOS) needs both on UEFI-only PCs.
+	Virtualization string   `json:"virtualization,omitempty"`
+	IOMMU          string   `json:"iommu,omitempty"`
+	PCI            []Device `json:"pci"`
+	Disks          []Disk   `json:"disks"`
 }
 
 // Facts converts a scan into the engine's hardware facts (for --facts).
@@ -204,9 +209,20 @@ func Evaluate(s *Scan) *Report {
 	case "bios":
 		add(Finding{Area: "Firmware", Level: "ok", Cap: Gold, Reason: "This PC is booting in Legacy/CSM mode, which Windows 98 needs."})
 	case "uefi":
-		add(Finding{Area: "Firmware", Level: "warn", Cap: Silver,
-			Reason: "This PC is booting in UEFI mode, so the scanner can't tell whether it also offers the Legacy/CSM boot Windows 98 needs.",
-			Fix:    "Look for 'CSM' or 'Legacy boot' in the BIOS setup. If it's there, Silver or better applies. If not, the CSMWrap workaround is needed (Bronze)."})
+		switch {
+		case s.Virtualization == "on" && s.IOMMU == "on":
+			add(Finding{Area: "Firmware", Level: "ok", Cap: Silver,
+				Reason: "UEFI PC with VT-x/AMD-V and an IOMMU: 98Reborn Boot gives Windows 98 a full legacy BIOS (ReBIOS), with ACPI and VGA even without CSM.",
+				Fix:    "If the firmware also offers 'CSM' or 'Legacy boot', that works too."})
+		case s.Virtualization == "off" || s.IOMMU == "off":
+			add(Finding{Area: "Firmware", Level: "warn", Cap: Bronze,
+				Reason: "UEFI PC without hardware virtualization or an IOMMU switched on: 98Reborn Boot falls back to a simpler BIOS layer (CSMWrap) that works on fewer PCs.",
+				Fix:    "Turn on 'Intel VT-x / AMD-V (SVM)' and 'VT-d / AMD-Vi (IOMMU)' in the firmware setup, or 'CSM / Legacy boot' if offered."})
+		default:
+			add(Finding{Area: "Firmware", Level: "warn", Cap: Silver,
+				Reason: "This PC boots in UEFI mode. 98Reborn Boot provides the legacy BIOS Windows 98 needs; it works best with VT-x/AMD-V and an IOMMU (VT-d/AMD-Vi) switched on.",
+				Fix:    "Check the firmware setup for 'Virtualization' and 'VT-d / IOMMU' (or 'CSM / Legacy boot')."})
+		}
 	default:
 		add(Finding{Area: "Firmware", Level: "info", Cap: Silver, Reason: "Boot mode unknown: check the BIOS for 'CSM' or 'Legacy boot'."})
 	}

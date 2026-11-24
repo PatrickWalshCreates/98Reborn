@@ -33,6 +33,7 @@ type Options struct {
 	Installer string // path to the linux/amd64 98reborn-installer binary
 	Modules   string // modules/ directory (copied to 98reborn/modules)
 	Editions  string // editions/ directory (copied to 98reborn/editions)
+	BootEFI   string // 98reborn-boot.efi (installer/boot/build.sh); "" leaves 98Reborn Boot out
 	Out       string // output ISO
 	Version   string // 98Reborn version, e.g. 0.1.0-dev
 	Now       time.Time
@@ -41,7 +42,8 @@ type Options struct {
 
 // Packages in the live system. Their dependencies are added automatically.
 var rootPackages = []string{"busybox", "busybox-binsh", "musl", "kmod", "qemu-system-i386", "ca-certificates-bundle",
-	"ntfs-3g-progs", "e2fsprogs"} // shrinking Windows / Linux partitions for multi-boot
+	"ntfs-3g-progs", "e2fsprogs", // shrinking Windows / Linux partitions for multi-boot
+	"efibootmgr"} // registering 98Reborn Boot with UEFI firmware
 
 // Dependencies we leave out on purpose (boot-time tooling of a normal Alpine).
 var skipDeps = map[string]bool{"initramfs-generator": true, "mkinitfs": true, "linux-firmware-any": true}
@@ -183,6 +185,21 @@ func Build(o Options) error {
 	}
 	for k, v := range espFiles {
 		files[k] = v
+	}
+	if o.BootEFI != "" {
+		b, err := os.ReadFile(o.BootEFI)
+		if err != nil {
+			return err
+		}
+		files["98reborn/boot/98reborn-boot.efi"] = b
+		files["98reborn/boot/NOTICE.txt"] = []byte(bootNotice)
+		for _, v := range vendorFiles {
+			vb, err := fetchVendor(filepath.Join(c.Cache, "..", "vendor"), v)
+			if err != nil {
+				return err
+			}
+			files["98reborn/boot/"+v.Name] = vb
+		}
 	}
 	for dir, dst := range map[string]string{o.Modules: "98reborn/modules", o.Editions: "98reborn/editions"} {
 		if dir == "" {

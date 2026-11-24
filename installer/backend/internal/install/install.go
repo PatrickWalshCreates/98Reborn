@@ -45,6 +45,14 @@ type Options struct {
 	EditionsDir string
 	Facts       *module.Facts
 
+	// BootDir holds 98Reborn Boot and its BIOS layers (98reborn/boot on the
+	// medium). They go into \EFI on the Windows 98 partition, so UEFI-only
+	// PCs can start Windows 98. "" skips this.
+	BootDir string
+	// RegisterBoot adds a "98Reborn Boot" UEFI boot entry, first in the boot
+	// order (the installer only sets this when it was itself started by UEFI).
+	RegisterBoot bool
+
 	WorkDir string // scratch space: the setup image lives here (sparse)
 	QEMU    string
 	Log     io.Writer
@@ -100,7 +108,10 @@ func Run(o Options) error {
 			return err
 		}
 		v.MkdirAll("98REBORN")
-		return v.WriteFile("98REBORN/PARTBACK.BIN", backup, time.Now())
+		if err := v.WriteFile("98REBORN/PARTBACK.BIN", backup, time.Now()); err != nil {
+			return err
+		}
+		return addBoot(v, o.BootDir)
 	}); err != nil {
 		return err
 	}
@@ -158,7 +169,48 @@ func Run(o Options) error {
 		s.Sync()
 	}
 	disk.Reread(o.Disk.Path)
+	if o.RegisterBoot && o.BootDir != "" {
+		slot := c.Slot
+		if c.Kind == disk.KindWholeDisk {
+			slot = 0
+		}
+		if err := registerBoot(o.Disk.Path, slot+1); err != nil {
+			fmt.Fprintf(log, "Couldn't add the UEFI boot entry (%v). Choose the disk in the firmware's boot menu instead.\n", err)
+		}
+	}
 	return nil
+}
+
+// addBoot puts 98Reborn Boot on the Windows 98 partition:
+//
+//	\EFI\BOOT\BOOTX64.EFI       the menu (UEFI firmware's default path)
+//	\EFI\98REBORN\REBIOS.EFI    BIOS layer, needs VT-x/AMD-V + IOMMU
+//	\EFI\98REBORN\CSMWRAP.EFI   BIOS layer for PCs without them
+//	\EFI\98REBORN\BOOT.CFG      menu settings
+func addBoot(v *fat.FS, dir string) error {
+	if dir == "" {
+		return nil
+	}
+	files := map[string]string{
+		"EFI/BOOT/BOOTX64.EFI":     "98reborn-boot.efi",
+		"EFI/98REBORN/REBIOS.EFI":  "rebios.efi",
+		"EFI/98REBORN/CSMWRAP.EFI": "csmwrapx64.efi",
+		"EFI/98REBORN/NOTICE.TXT":  "NOTICE.txt",
+	}
+	for dst, src := range files {
+		b, err := os.ReadFile(filepath.Join(dir, src))
+		if err != nil {
+			return fmt.Errorf("98Reborn Boot: %w", err)
+		}
+		if err := v.MkdirAll(filepath.ToSlash(filepath.Dir(dst))); err != nil {
+			return err
+		}
+		if err := v.WriteFile(dst, b, time.Now()); err != nil {
+			return err
+		}
+	}
+	cfg := "; 98Reborn Boot settings\r\ntimeout=5\r\ndefault=win98\r\n; auto: ReBIOS, or CSMWrap where ReBIOS can't run. Or: rebios, csmwrap\r\nengine=auto\r\n"
+	return v.WriteFile("EFI/98REBORN/BOOT.CFG", []byte(cfg), time.Now())
 }
 
 type readOnly struct{ f *os.File }

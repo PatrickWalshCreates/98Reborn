@@ -225,6 +225,7 @@ func installFlow(med *medium, rep *compat.Report, auto bool) {
 		Source: lab.DirSource{Dir: med.Setup, Floppy: findCI(med.Mount, "98reborn/cdboot.img")},
 		Key:    key, Answers: ans, AcceptEULA: true,
 		Edition: edition, ModulesDir: findCI(med.Mount, "98reborn/modules"), EditionsDir: findCI(med.Mount, "98reborn/editions"),
+		BootDir: findCI(med.Mount, "98reborn/boot"), RegisterBoot: rep.Scan.Firmware == "uefi",
 		Facts: rep.Scan.Facts(), WorkDir: work, Log: logf,
 		Stage: func(s string) {
 			step(stageNames[s])
@@ -243,7 +244,7 @@ func installFlow(med *medium, rep *compat.Report, auto bool) {
 		os.WriteFile("/run/98reborn-installed.json", js, 0o644)
 	}
 	if rep.Scan.Firmware == "uefi" {
-		warn("This PC started the installer in UEFI mode. To start Windows 98, choose the disk's Legacy/CSM entry in the boot menu (98Reborn Boot will do this for you later).")
+		info("98Reborn Boot is now this PC's first boot option. It starts Windows 98, and lists your other systems too.")
 	}
 	info("Remove the USB stick, then restart.")
 	marker("INSTALL done")

@@ -35,3 +35,22 @@ func TestResolveNet(t *testing.T) {
 	Unpack(b, func(e Entry) error { n++; return nil })
 	t.Logf("busybox: %d entries", n)
 }
+
+// Lists a package's files: APK_NET=1 APK_LIST=font-terminus go test ./internal/apk -run List -v
+func TestListNet(t *testing.T) {
+	name := os.Getenv("APK_LIST")
+	if os.Getenv("APK_NET") == "" || name == "" {
+		t.Skip("set APK_NET=1 and APK_LIST")
+	}
+	c := &Client{Mirror: "https://dl-cdn.alpinelinux.org/alpine", Branch: "v3.24", Arch: "x86_64", Cache: os.Getenv("APK_CACHE")}
+	for _, r := range []string{"main", "community"} {
+		if err := c.LoadIndex(r); err != nil {
+			t.Fatal(err)
+		}
+	}
+	b, err := c.Fetch(c.Lookup(name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	Unpack(b, func(e Entry) error { t.Logf("%s %d", e.Path, len(e.Data)); return nil })
+}
