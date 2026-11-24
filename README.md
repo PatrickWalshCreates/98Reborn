@@ -1,4 +1,4 @@
-# Win9x-Modern (working name)
+# 98Reborn
 
 A modern, network-aware installer that puts a patched, driver-equipped **Windows 98 SE** onto current PCs,
 plus a built-in **Control Center** for specs, monitoring and updates. Core and Gaming editions.

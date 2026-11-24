@@ -1,6 +1,6 @@
 # Project Plan: Windows 98 SE on Modern PCs
 
-> Working name: **Win9x-Modern**. Pick a public name that doesn't include "Windows" (see §1.2).
+> Project name: **98Reborn** (deliberately without "Windows"; see §1.2).
 
 ## 0. Summary
 
@@ -228,7 +228,7 @@ GitHub Pages (Astro or plain static) in `site/`:
    Contact rights holders early; plan clean-room replacements for anything we can't redistribute.
 
 ## 6. Open decisions
-- Public project name.
+- ~~Public project name~~: decided, **98Reborn**.
 - UI stack: web UI in kiosk (recommended) vs. Qt/QML.
 - Minimum supported hardware era (sets how hard we push on CSMWrap, xHCI, and NVMe).
 - Whether the Gaming edition requires a period GPU for "Gold," or treats software 3D as first-class.
