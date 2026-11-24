@@ -6,7 +6,11 @@ plus a built-in **Control Center** for specs, monitoring and updates. Core and G
 **Bring your own Windows:** this project ships no Microsoft code. You supply your own 98 SE CD/ISO and key;
 the installer patches it locally.
 
-- Plan & architecture: [docs/PLAN.md](docs/PLAN.md)
+- Plan & architecture: [docs/PLAN.md](docs/PLAN.md) · NVMe driver plan: [docs/NVME.md](docs/NVME.md)
+- **PC compatibility scanner:** `98reborn-check` (Windows 10/11 or Linux, no admin rights, nothing is changed
+  or sent anywhere) grades a PC Gold / Silver / Bronze / In development / Not supported, with the reasons
+  why. Build it with `installer/backend/scripts/build-all.sh`. The rules are data:
+  [rules.json](installer/backend/internal/compat/rules.json).
 
 | Path | What |
 |---|---|

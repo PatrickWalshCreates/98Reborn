@@ -1,6 +1,11 @@
 {
   "id": "core",
   "name": "Core",
-  "description": "Patched Windows 98 SE with stability fixes for modern hardware, drivers and the Control Center. No extras.",
-  "modules": ["ram-cap", "vcache-tuning", "boot-options", "show-file-extensions"]
+  "description": "For the software you still depend on: patched Windows 98 SE tuned for stability on modern hardware, with matched drivers, the runtimes old business software expects, legacy serial/parallel I/O and easy data exchange.",
+  "modules": [
+    "ram-cap",
+    "vcache-tuning",
+    "boot-options",
+    "show-file-extensions"
+  ]
 }

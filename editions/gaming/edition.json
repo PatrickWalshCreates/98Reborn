@@ -1,7 +1,15 @@
 {
   "id": "gaming",
   "name": "Gaming",
-  "description": "Core plus a setup for late-90s and early-2000s games, including a DOS-mode startup menu.",
-  "modules": ["ram-cap", "vcache-tuning", "boot-options", "show-file-extensions", "boot-menu"],
-  "params": { "boot-menu.delay": 3 }
+  "description": "For the games you grew up with: Core plus DOS mode, period-correct sound and music, 3D options, speed control for games too fast on modern CPUs, controller support and mounting your own game CDs.",
+  "modules": [
+    "ram-cap",
+    "vcache-tuning",
+    "boot-options",
+    "show-file-extensions",
+    "boot-menu"
+  ],
+  "params": {
+    "boot-menu.delay": 3
+  }
 }

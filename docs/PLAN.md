@@ -57,7 +57,8 @@ Be upfront with users. Publish a hardware compatibility list (HCL).
 | **Gold** | Everything works, including 3D | Board with CSM and SATA IDE mode, a Win9x-supported PCIe GPU (GeForce 6/7 class), a supported NIC |
 | **Silver** | Works; 2D video (VESA) or software 3D; some devices unsupported | Most 2015–2022 desktops with CSM |
 | **Bronze** | Boots via CSMWrap and AHCI drivers; limited | Class-3 UEFI machines (no CSM), recent laptops |
-| **Unsupported** | NVMe-only boot with no SATA, ARM, etc. | — |
+| **In development** | NVMe-only PCs (most new machines) | Needs the new NVMe driver: see [NVME.md](NVME.md) |
+| **Unsupported** | ARM | — |
 
 **The GPU problem:** no modern NVIDIA, AMD, or Intel GPU has 9x drivers. Options:
 - VBEMP universal VESA driver (2D, high resolutions, no acceleration).
@@ -162,11 +163,28 @@ import exists in 98 SE's `KERNEL32` and `USER32`). No .NET, no KernelEx dependen
   (A cheap replacement for System Restore.)
 
 ### 2.5 Editions
-- **Core:** patched 98 SE, drivers, Control Center, USP-class fixes, no extras.
-- **Gaming (late 90s / early 2000s):** Core plus DirectX 9.0c, OpenGL/Glide options (native or
-  wrapper, depending on GPU), SoftGPU if benchmarks pass, DOS gaming kit (HimemX, JemmEx, SBEMU, CTMOUSE,
-  boot menu "Win98 / DOS games mode"), KernelEx, the VC++ and VB runtimes of the era, codecs, a virtual CD
-  drive, and per-game fixes (a curated list of common compatibility patches).
+**Core: for the software you still depend on.** Aimed at businesses running legacy
+software (machine control, lab instruments, point of sale, accounting, CAD) and at everyday users with an
+old app that won't run on modern Windows, such as an early Photoshop. Priorities are stability,
+predictability and getting data in and out:
+- patched 98 SE, matched drivers, Control Center, stability fixes;
+- the runtimes old business software expects (VB5/VB6, MFC/MSVCRT, older Jet/ODBC, DCOM);
+- **legacy I/O on modern boards:** USB-to-serial and USB-to-parallel adapter drivers, and PCIe serial and
+  parallel cards, for machines that talk RS-232 or LPT;
+- **data exchange:** USB mass storage, a print-to-PDF printer, and file sharing with modern PCs (modern
+  Windows disables the SMB1 protocol 98 uses, so ship a documented bridge);
+- a "locked-down" profile: offline by default, no auto-run, scheduled backups through the Control Center.
+
+**Gaming: for the games you grew up with.** Aimed at people who remember late-90s and early-2000s PC
+gaming (3D racers, licensed movie tie-ins, kids' sports titles, space shooters) and want those games
+running the way they remember. Core plus:
+- DirectX 9.0c; 3D through a period GPU, SoftGPU or Glide/D3D wrappers depending on hardware;
+- **DOS mode:** startup menu, HimemX/JemmEx, SBEMU (Sound Blaster on modern audio), CTMOUSE;
+- **period-correct sound and music:** a General MIDI software synth for games that relied on MIDI;
+- **speed control:** CPU throttling and frame limiters for games that run too fast on modern CPUs;
+- **controllers:** USB gamepads and joysticks through DirectInput;
+- **your CDs:** mount ISO images of discs you own, and play CD-audio soundtracks from them;
+- KernelEx, codecs (Indeo, Cinepak, MPEG-1 for cutscenes), and per-game fixes (a curated list).
 
 Both editions are the *same installer ISO*. The edition is a choice in the UI, so we ship and test one image.
 
@@ -219,6 +237,8 @@ GitHub Pages (Astro or plain static) in `site/`:
 | **Ongoing** | Clean-room drivers: xHCI, AHCI, possibly NVMe | Each ships as a module |
 
 ## 5. Big-risk items (attack first)
+0. **NVMe:** most new PCs have no SATA port, so this is close to non-negotiable. It's a new driver
+   project with its own plan: [NVME.md](NVME.md).
 1. **USB 3 / xHCI driver:** needed on boards without USB 2 ports or legacy emulation. A real
    VxD/WDM driver project: start research in Phase 0 and check current MSFN community efforts first.
 2. **3D on modern GPUs:** if SoftGPU's software rendering isn't fast enough, the Gaming edition

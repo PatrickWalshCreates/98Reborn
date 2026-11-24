@@ -119,8 +119,10 @@ any host OS. `media.extract` pulls a file out of the setup cabinets (`WIN98\` on
 
 This is how modules use Microsoft files without the repo shipping any:
 - *Restore or replace from the original:* e.g. re-extract a pristine file before applying a delta.
-- *Backport from Me:* e.g. Me's USB mass-storage stack (`USBSTOR.SYS`, `USBHUB.SYS`, ...) onto 98 SE,
-  the way 98SE2ME-style projects do, but taken from the user's own Me disc.
+- *Backport from Me (developer option only):* e.g. Me's USB mass-storage stack (`USBSTOR.SYS`, `USBHUB.SYS`,
+  ...) onto 98 SE, the way 98SE2ME-style projects do. End users never need a Me disc. A module that wants a
+  Me component must be optional, or the component must be replaced with an open-source equivalent before
+  it ships in an edition.
 
 Pin `sha256` so a module only uses the exact release it was tested with. An optional op is skipped (with a
 note) when the CD isn't provided. A required one fails the plan and tells the user to pass `--media`.

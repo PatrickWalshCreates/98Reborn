@@ -93,32 +93,37 @@ Booting the patched image...
       <div class="grid c2">
         <div class="card edition">
           <span class="tag">Core</span>
-          <h3>Core</h3>
-          <p>Clean, patched 98 SE with stability fixes for modern hardware, matched drivers and the Control Center. Nothing extra.</p>
+          <h3>For the software you still depend on</h3>
+          <p>For businesses running machines, instruments or accounts on software that never made it past Windows 98, and for anyone with an old app modern Windows won't run, such as an early Photoshop.</p>
           <ul>
-            <li>RAM cap and disk-cache tuning</li>
-            <li>Boot fixes for modern firmware and video</li>
-            <li>Sensible defaults, such as showing file extensions</li>
+            <li>Tuned for stability on modern hardware</li>
+            <li>The runtimes old business software expects</li>
+            <li>Serial and parallel ports through USB adapters or PCIe cards</li>
+            <li>Easy data exchange: USB drives, print to PDF, sharing with modern PCs</li>
+            <li>A locked-down, offline-first setup with backups</li>
           </ul>
         </div>
         <div class="card edition">
           <span class="tag">Gaming</span>
-          <h3>Gaming</h3>
-          <p>Everything in Core, plus a setup for late-90s and early-2000s PC games.</p>
+          <h3>For the games you grew up with</h3>
+          <p>For everyone who remembers late-90s and early-2000s PC gaming: the racers, the movie tie-ins, the backyard sports, the space dogfights. Everything in Core, set up to play.</p>
           <ul>
-            <li>Startup menu with a real DOS mode for DOS games</li>
-            <li>DirectX 9.0c and period runtimes</li>
-            <li>Sound Blaster emulation and 3D options for your GPU <em>(planned)</em></li>
+            <li>A real DOS mode, with Sound Blaster emulation on modern audio</li>
+            <li>MIDI music the way the games intended</li>
+            <li>Speed control for games that run too fast on modern CPUs</li>
+            <li>3D options for your graphics card, and USB gamepads and joysticks</li>
+            <li>Play from images of the game CDs you own</li>
           </ul>
         </div>
       </div>
+      <p class="sub" style="margin:16px 0 0;font-size:15px">Most of these are on the roadmap; see <a href="#status">where the project is today</a>.</p>
     </div>
   </section>
 
   <section id="hardware">
     <div class="wrap">
       <h2>Will it run on my PC?</h2>
-      <p class="sub">Honest answer: it depends on the machine. These are the tiers 98Reborn targets. A hardware compatibility list built from real test reports will follow.</p>
+      <p class="sub">Honest answer: it depends on the machine. These are the tiers 98Reborn targets. A free scanner that grades your PC before you install anything, with the reasons why, is on the way. A hardware compatibility list built from real test reports will follow.</p>
       <div class="tablewrap">
         <table>
           <thead><tr><th>Tier</th><th>What works</th><th>Typical machine</th></tr></thead>
@@ -126,7 +131,8 @@ Booting the patched image...
             <tr><td><span class="tier t-gold">Gold</span></td><td>Everything, including hardware 3D</td><td>Board with legacy boot (CSM) and SATA IDE mode, a 98-compatible PCIe graphics card, and a supported network card</td></tr>
             <tr><td><span class="tier t-silver">Silver</span></td><td>Stable desktop; 2D or software 3D; some devices unsupported</td><td>Most desktops from 2015–2022 with legacy boot</td></tr>
             <tr><td><span class="tier t-bronze">Bronze</span></td><td>Boots with workarounds; limited</td><td>Newer UEFI-only machines and recent laptops</td></tr>
-            <tr><td><span class="tier t-no">Not yet</span></td><td>—</td><td>NVMe-only systems with no SATA, ARM computers</td></tr>
+            <tr><td><span class="tier t-no">In development</span></td><td>NVMe-only PCs: a new NVMe driver for 98 is being built</td><td>Most new desktops and laptops (no SATA port)</td></tr>
+            <tr><td><span class="tier t-no">Not supported</span></td><td>—</td><td>ARM computers (Windows 98 is x86-only)</td></tr>
           </tbody>
         </table>
       </div>
@@ -139,9 +145,11 @@ Booting the patched image...
       <p class="sub">98Reborn is pre-alpha: there's no download yet. Here's exactly what's built and tested so far, and what's next.</p>
       <ul class="status-list">
         <li><span class="pill done">Done</span><div><strong>Patch engine</strong><span class="d">Modules with hardware conditions and parameters, dry-run diffs, journalled apply and one-command rollback. Runs on Windows, macOS and Linux.</span></div></li>
-        <li><span class="pill done">Done</span><div><strong>Reads your original CD</strong><span class="d">ISO 9660 and Joliet, plus Microsoft's multi-cabinet LZX and MSZIP archives. Verified: every setup file on the 98 SE and Me discs extracts, checked against thousands of program checksums.</span></div></li>
+        <li><span class="pill done">Done</span><div><strong>Reads your original CD</strong><span class="d">ISO 9660 and Joliet, plus Microsoft's multi-cabinet LZX and MSZIP archives. Verified: every setup file on the Windows 98 SE disc extracts, checked against more than a thousand program checksums.</span></div></li>
         <li><span class="pill done">Done</span><div><strong>Disk tooling</strong><span class="d">Partitioning, FAT32 formatting and long file names, written in-house, so disks are prepared and patched without mounting them.</span></div></li>
         <li><span class="pill done">Done</span><div><strong>Automated test lab</strong><span class="d">A fully unattended 98 SE install in a virtual machine (about 25 minutes), then every module verified inside the running Windows: boot, registry and files.</span></div></li>
+        <li><span class="pill wip">In progress</span><div><strong>NVMe support</strong><span class="d">No NVMe driver for Windows 98 exists, so we're building one. Windows 98 already boots from an emulated NVMe drive in the lab. Next: a reliable boot path, then a native driver.</span></div></li>
+        <li><span class="pill wip">In progress</span><div><strong>PC compatibility scanner</strong><span class="d">A small download that checks your PC before you install, and grades it Gold, Silver or Bronze with the reasons why.</span></div></li>
         <li><span class="pill wip">Next</span><div><strong>Real-hardware testing</strong><span class="d">A small lab of real PCs covering each tier: legacy boot, AHCI, memory limits, video and 3D performance.</span></div></li>
         <li><span class="pill todo">Planned</span><div><strong>Graphical installer</strong><span class="d">The USB installer with hardware report, networking, driver download and edition choice.</span></div></li>
         <li><span class="pill todo">Planned</span><div><strong>Control Center</strong><span class="d">A native app inside 98 for specs, resource monitoring, build info, updates and rollback.</span></div></li>
@@ -181,7 +189,6 @@ cd installer/backend &amp;&amp; go build -o w9xm ./cmd/w9xm
   <section id="faq">
     <div class="wrap">
       <h2>FAQ</h2>
-      <details><summary>Why 98 SE and not Windows Me?</summary><p>98 SE can boot to real DOS, which DOS games and Sound Blaster emulation need. It's also more stable, and most community fixes target it. Your Me disc is still useful: modules can borrow newer components from it, such as its USB stack.</p></details>
       <details><summary>Can I download a ready-made ISO?</summary><p>No. Distributing Windows itself would be copyright infringement. When 98Reborn is released, you'll download our installer, which contains only open-source code, and use it with your own CD.</p></details>
       <details><summary>Will my graphics card do 3D?</summary><p>Modern NVIDIA, AMD and Intel GPUs have no Windows 98 drivers. Expect 2D on those, with software 3D being evaluated. For full hardware 3D, a period-compatible PCIe card is the reliable route.</p></details>
       <details><summary>Is it safe to connect to the internet?</summary><p>Windows 98 hasn't had security updates in decades. Use it offline or behind a router, never directly exposed. The installer goes online only before Windows is installed, to fetch drivers, and updates are cryptographically signed.</p></details>
