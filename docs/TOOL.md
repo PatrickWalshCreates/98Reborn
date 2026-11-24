@@ -63,6 +63,14 @@ Windows. The installer finds `98SE/` on the medium it booted from.
 
 ## Using the Tool
 
+Release downloads:
+- **macOS:** `98Reborn-Tool-macOS.zip` holds `98Reborn Tool.app` (universal, ad-hoc signed;
+  `scripts/package-macos.sh`). Double-click to start. It has no Dock icon: its window is the browser
+  page, and it quits by itself about a minute and a half after the page is closed (or with Quit).
+  Not notarized yet, so macOS asks once on first launch.
+- **Windows:** `98reborn-tool-windows-amd64.exe`, built without a console window.
+- **Linux:** `98reborn-tool-linux-amd64`.
+
 ```
 cd installer/backend
 go run ./cmd/98reborn                          # downloads the published base image on first build

@@ -68,9 +68,30 @@ jobs:
             installer/backend/dist/98reborn-base.iso.sha256
             installer/backend/dist/98reborn-tool-*
 
+  macapp:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: installer/backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: installer/backend/go.mod
+          cache-dependency-path: installer/backend/go.mod
+      - name: Build the macOS app (universal, ad-hoc signed)
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          [ "$GITHUB_REF_TYPE" = tag ] || VERSION="0.1.0-dev+${GITHUB_SHA::7}"
+          VERSION="$VERSION" sh scripts/package-macos.sh
+      - uses: actions/upload-artifact@v7
+        with:
+          name: 98reborn-macapp
+          path: installer/backend/dist/98Reborn-Tool-macOS.zip
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: [build, macapp]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -78,10 +99,13 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: 98reborn-base
+      - uses: actions/download-artifact@v8
+        with:
+          name: 98reborn-macapp
       - name: Attach to the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
             gh release create "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --prerelease --title "98Reborn $GITHUB_REF_NAME" --notes "Installer base image. Use the 98Reborn Tool to build your installer from it."
-          gh release upload "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --clobber 98reborn-base.iso 98reborn-base.iso.sha256 98reborn-tool-*
+          gh release upload "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --clobber 98reborn-base.iso 98reborn-base.iso.sha256 98reborn-tool-* 98Reborn-Tool-macOS.zip

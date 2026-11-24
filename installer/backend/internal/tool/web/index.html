@@ -80,7 +80,7 @@ pre { background: var(--surface-2); padding: 10px 12px; border-radius: 8px; over
   <img src="favicon.svg" alt="">
   <h1>98Reborn Tool</h1><span class="ver" id="ver"></span>
   <span class="grow"></span>
-  <button class="link" id="quit" title="Stop the Tool">Quit</button>
+  <button class="link" id="quit" title="Stop the Tool (it also stops by itself shortly after you close this tab)">Quit</button>
 </div></header>
 
 <main>
@@ -279,6 +279,8 @@ $('quit').onclick = async () => {
   document.body.innerHTML = '<main><div class="card"><h2>98Reborn Tool has stopped.</h2><p class="lead">You can close this tab.</p></div></main>';
 };
 init();
+// Keep the Tool running while this page is open; it quits soon after the tab closes.
+setInterval(() => api('ping').catch(() => {}), 5000);
 </script>
 </body>
 </html>

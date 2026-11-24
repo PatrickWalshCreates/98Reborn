@@ -38,8 +38,10 @@ type Server struct {
 	srv     *http.Server
 	done    chan struct{}
 
-	mu  sync.Mutex
-	job Job
+	mu       sync.Mutex
+	job      Job
+	lastSeen time.Time // the page's last request (zero until it connects)
+	stopOnce sync.Once
 }
 
 // Job is the state of the current build.
@@ -76,6 +78,7 @@ func (s *Server) Start() (string, error) {
 		"/api/job":      s.jobState,
 		"/api/reveal":   s.reveal,
 		"/api/quit":     s.quit,
+		"/api/ping":     func(*http.Request) (any, error) { return map[string]bool{"ok": true}, nil },
 	}
 	for path, h := range api {
 		h := h
@@ -84,6 +87,9 @@ func (s *Server) Start() (string, error) {
 				http.Error(w, "forbidden", http.StatusForbidden)
 				return
 			}
+			s.mu.Lock()
+			s.lastSeen = time.Now()
+			s.mu.Unlock()
 			w.Header().Set("Content-Type", "application/json")
 			w.Header().Set("Cache-Control", "no-store")
 			v, err := h(r)
@@ -96,6 +102,7 @@ func (s *Server) Start() (string, error) {
 	}
 	s.srv = &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	go s.srv.Serve(ln)
+	go s.watchdog(time.Now())
 	return fmt.Sprintf("http://%s/?t=%s", ln.Addr(), s.token), nil
 }
 
@@ -235,10 +242,36 @@ func (s *Server) reveal(r *http.Request) (any, error) {
 func (s *Server) quit(r *http.Request) (any, error) {
 	go func() {
 		time.Sleep(300 * time.Millisecond)
+		s.stop()
+	}()
+	return map[string]bool{"ok": true}, nil
+}
+
+func (s *Server) stop() {
+	s.stopOnce.Do(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 		s.srv.Shutdown(ctx)
 		close(s.done)
-	}()
-	return map[string]bool{"ok": true}, nil
+	})
+}
+
+// watchdog stops the Tool when its page has gone away (no requests for 90
+// s; background tabs may only ping once a minute) and no build is running,
+// or when the page never connects at all. Launched as an app, the Tool has
+// no window of its own to close.
+func (s *Server) watchdog(started time.Time) {
+	for {
+		time.Sleep(5 * time.Second)
+		s.mu.Lock()
+		seen, running := s.lastSeen, s.job.State == "running"
+		s.mu.Unlock()
+		switch {
+		case running:
+		case seen.IsZero() && time.Since(started) > 10*time.Minute,
+			!seen.IsZero() && time.Since(seen) > 90*time.Second:
+			s.stop()
+			return
+		}
+	}
 }

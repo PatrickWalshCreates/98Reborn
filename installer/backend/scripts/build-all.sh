@@ -12,8 +12,9 @@ for target in darwin/arm64 darwin/amd64 linux/amd64 linux/arm64 linux/386 window
   # computers people have today.
   case "$os/$arch" in darwin/arm64|darwin/amd64|linux/amd64|linux/arm64|windows/amd64|windows/arm64)
     tool="dist/98reborn-tool-$os-$arch$ext"
+    gui=""; [ "$os" = windows ] && gui="-H=windowsgui" # no console window
     CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" go build -trimpath \
-      -ldflags "-s -w -X main.version=$VERSION" -o "$tool" ./cmd/98reborn
+      -ldflags "-s -w $gui -X main.version=$VERSION" -o "$tool" ./cmd/98reborn
     echo "built $tool";;
   esac
   out="dist/w9xm-$os-$arch$ext"
