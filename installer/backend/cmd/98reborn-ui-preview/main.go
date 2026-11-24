@@ -5,6 +5,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"image"
@@ -32,12 +33,20 @@ func (m mock) Prepare(status func(string)) (*installui.Medium, error) {
 func (mock) Connect() installui.NetState {
 	return installui.NetState{Wired: []string{"eth0"}, Wireless: []string{"wlan0"}}
 }
-func (mock) Online() bool { return true }
+func (mock) InternetCheck() error {
+	return errors.New("Name lookup (DNS) failed: lookup connectivitycheck.gstatic.com: i/o timeout. Address wlan0 192.168.43.20/24; gateway: default via 192.168.43.1 dev wlan0; DNS: 192.168.43.1.")
+}
 func (mock) WifiScan() ([]installui.WifiNet, error) {
-	return []installui.WifiNet{{SSID: "HomeNetwork", Signal: -48, Secured: true}, {SSID: "Neighbors 5G", Signal: -67, Secured: true},
-		{SSID: "Coffee Shop Guest", Signal: -78}}, nil
+	var nets []installui.WifiNet
+	for i, n := range []string{"HomeNetwork", "Neighbors 5G", "Coffee Shop Guest", "xfinitywifi", "Office", "Office Guest", "Printer-42", "Apartment 3B", "Library", "Phone Hotspot", "Lab"} {
+		nets = append(nets, installui.WifiNet{SSID: n, Signal: -45 - i*4, Secured: i != 2 && i != 3})
+	}
+	return nets, nil
 }
 func (mock) WifiConnect(string, string) error { return nil }
+
+var _ = errors.New
+
 func (mock) Check() *compat.Report {
 	return compat.Evaluate(&compat.Scan{OS: "98Reborn Installer", Arch: "x86_64", CPU: "Intel Core i5-4590 @ 3.30GHz", CPUMHz: 3300, RAMMB: 8192,
 		Firmware: "uefi", SecureBoot: "off", Virtualization: "on", IOMMU: "on",
@@ -108,6 +117,18 @@ func main() {
 		time.Sleep(80 * time.Millisecond)
 		a.Frame(u, nil)
 		shot("2b-wifi-list")
+		// Pick the first network, type a password, connect: the "joined, no internet" case.
+		a.Frame(u, []gui.Event{{Key: gui.KeyTab}})
+		a.Frame(u, []gui.Event{{Key: gui.KeyTab}})
+		a.Frame(u, []gui.Event{{Key: gui.KeySpace, Rune: ' '}})
+		var pw []gui.Event
+		for _, r := range "password1" {
+			pw = append(pw, gui.Event{Rune: r})
+		}
+		a.Frame(u, pw)
+		a.Frame(u, []gui.Event{{Key: gui.KeyEnter}})
+		time.Sleep(80 * time.Millisecond)
+		shot("2c-wifi-no-internet")
 		shot("3-check", gui.Event{Key: gui.KeyTab}, gui.Event{Key: gui.KeyTab}, enter) // "Continue without internet"
 		shot("4-disk", enter)
 		shot("5-details", enter)

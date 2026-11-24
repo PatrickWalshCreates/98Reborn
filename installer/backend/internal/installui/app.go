@@ -38,6 +38,8 @@ type NetState struct {
 	Online   bool
 	Wired    []string
 	Wireless []string
+	// Problem explains a failed internet check on a wired connection.
+	Problem string
 	// WifiProblem is set when a Wi-Fi adapter exists but didn't start;
 	// WifiDetails are the facts for a bug report (IDs, driver, kernel log).
 	WifiProblem string
@@ -58,7 +60,7 @@ type Request struct {
 type System interface {
 	Prepare(status func(string)) (*Medium, error) // drivers, find the medium
 	Connect() NetState
-	Online() bool // a quick internet check
+	InternetCheck() error // nil when online; else which step fails, with details
 	WifiScan() ([]WifiNet, error)
 	WifiConnect(ssid, password string) error
 	Check() *compat.Report
@@ -112,6 +114,7 @@ type App struct {
 	wifiJoined   string
 	wifiErr      string
 	focusPass    bool
+	wifiPage     int
 
 	report  *compat.Report
 	scroll  int
@@ -479,14 +482,17 @@ func (a *App) startWifiJoin(n WifiNet, pass string) {
 	a.wifiJoining, a.wifiErr = true, ""
 	go func() {
 		err := a.Sys.WifiConnect(n.SSID, pass)
-		online := err == nil && a.Sys.Online()
+		var check error
+		if err == nil {
+			check = a.Sys.InternetCheck()
+		}
 		a.mu.Lock()
 		a.wifiJoining = false
 		switch {
 		case err != nil:
 			a.wifiErr = err.Error()
-		case !online:
-			a.wifiErr = "Joined " + n.SSID + ", but it has no internet access."
+		case check != nil:
+			a.wifiErr = "Joined " + n.SSID + ", but there's no internet. " + check.Error()
 		default:
 			a.wifiJoined = n.SSID
 			a.net.Online = true
@@ -535,14 +541,28 @@ func (a *App) wifiPicker(u *gui.UI, r gui.Rect, btnH int) int {
 		return y + t.Body.H + 16
 	}
 	rowH := t.Body.H + 14
-	maxRows := max(3, (r.H-200)/(rowH+2))
+	// Leave room below the list for the password row, a status message, the
+	// offline warning and its buttons, so nothing spills out of the window.
+	reserved := (t.Small.H + 4 + btnH + 18) + (3*(t.Body.H+4) + 28) + (3*(t.Body.H+4) + 34) + btnH + 12
+	maxRows := max(2, (r.H-(y-r.Y)-reserved)/(rowH+2))
 	if len(a.wifiNets) == 0 && a.wifiErr == "" {
 		c.Text(t.Body, r.X, y, "No networks found. Move closer to the router, then Refresh.", t.Muted)
 		y += t.Body.H + 14
 	}
+	pages := (len(a.wifiNets) + maxRows - 1) / maxRows
+	if a.wifiPage >= pages {
+		a.wifiPage = 0
+	}
+	if pages > 1 {
+		label := fmt.Sprintf("More (%d/%d)", a.wifiPage+1, pages)
+		mw := t.Bold.Width(label) + 32
+		if u.Button(gui.R(r.X+r.W-rw-12-mw, r.Y-6, mw, t.Bold.H+12), label, false, !a.wifiJoining) {
+			a.wifiPage = (a.wifiPage + 1) % pages
+		}
+	}
 	for i, n := range a.wifiNets {
-		if i >= maxRows {
-			break
+		if i < a.wifiPage*maxRows || i >= (a.wifiPage+1)*maxRows {
+			continue
 		}
 		row := gui.R(r.X, y, r.W, rowH)
 		if u.Row(row, a.wifiPick == i, !a.wifiJoining) && a.wifiPick != i {

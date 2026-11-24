@@ -13,9 +13,12 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -371,14 +374,83 @@ func ifaces() (wired, wireless []string) {
 	return
 }
 
-func internetUp() bool {
-	c := &http.Client{Timeout: 8 * time.Second}
-	resp, err := c.Head("https://github.com/")
+func internetUp() bool { return internetCheck() == nil }
+
+// netFacts describes the current IP setup for messages: address, gateway, DNS.
+func netFacts() string {
+	addrs, _ := run(3*time.Second, "ip", "-4", "-o", "addr", "show", "scope", "global")
+	var ips []string
+	for _, l := range strings.Split(string(addrs), "\n") {
+		f := strings.Fields(l)
+		if len(f) >= 4 {
+			ips = append(ips, f[1]+" "+f[3])
+		}
+	}
+	route, _ := run(3*time.Second, "ip", "-4", "route", "show", "default")
+	gw := strings.TrimSpace(string(route))
+	dns, _ := os.ReadFile("/etc/resolv.conf")
+	var servers []string
+	for _, l := range strings.Split(string(dns), "\n") {
+		if v, ok := strings.CutPrefix(strings.TrimSpace(l), "nameserver "); ok {
+			servers = append(servers, v)
+		}
+	}
+	if len(ips) == 0 {
+		ips = []string{"none"}
+	}
+	if gw == "" {
+		gw = "none"
+	}
+	if len(servers) == 0 {
+		servers = []string{"none"}
+	}
+	return fmt.Sprintf("Address %s; gateway: %s; DNS: %s.", strings.Join(ips, ", "), gw, strings.Join(servers, " "))
+}
+
+// internetCheck tests the connection step by step (retrying for up to 20 s,
+// as a fresh connection can take a moment) and says which step fails.
+func internetCheck() error {
+	var last error
+	deadline := time.Now().Add(20 * time.Second)
+	for {
+		last = internetOnce()
+		if last == nil || time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(2 * time.Second)
+	}
+	if last != nil {
+		marker("NET check: " + last.Error() + " " + netFacts())
+		return fmt.Errorf("%v %s", last, netFacts())
+	}
+	return nil
+}
+
+func internetOnce() error {
+	route, _ := run(3*time.Second, "ip", "-4", "route", "show", "default")
+	if strings.TrimSpace(string(route)) == "" {
+		return errors.New("No gateway: the network didn't give this PC a route to the internet.")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+	if _, err := net.DefaultResolver.LookupHost(ctx, "connectivitycheck.gstatic.com"); err != nil {
+		return fmt.Errorf("Name lookup (DNS) failed: %v.", err)
+	}
+	c := &http.Client{Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	resp, err := c.Get("http://connectivitycheck.gstatic.com/generate_204")
 	if err != nil {
-		return false
+		return fmt.Errorf("No web access: %v.", err)
 	}
 	resp.Body.Close()
-	return true
+	if resp.StatusCode != 204 {
+		return errors.New("This network shows a sign-in page (guest Wi-Fi). Sign-in pages aren't supported yet; use another network.")
+	}
+	resp, err = c.Head("https://github.com/")
+	if err != nil {
+		return fmt.Errorf("Secure (HTTPS) connections fail: %v. The PC's clock says %s.", err, time.Now().UTC().Format("2006-01-02 15:04 UTC"))
+	}
+	resp.Body.Close()
+	return nil
 }
 
 // network gets the PC online over Ethernet. Offline is allowed, with a warning.

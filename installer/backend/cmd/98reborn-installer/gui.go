@@ -67,7 +67,12 @@ func (s *linuxSystem) Connect() installui.NetState {
 		exec.Command("ip", "link", "set", n, "up").Run()
 		exec.Command("udhcpc", "-i", n, "-f", "-q", "-n", "-t", "4", "-T", "2", "-s", "/usr/share/98reborn/udhcpc.script").Run()
 	}
-	st := installui.NetState{Online: internetUp(), Wired: wired, Wireless: wireless}
+	st := installui.NetState{Wired: wired, Wireless: wireless}
+	if err := internetCheck(); err == nil {
+		st.Online = true
+	} else if len(wired) > 0 {
+		st.Problem = err.Error()
+	}
 	if len(wireless) == 0 {
 		st.WifiProblem, st.WifiDetails = wifiDiagnose()
 		for _, l := range st.WifiDetails {
@@ -78,7 +83,7 @@ func (s *linuxSystem) Connect() installui.NetState {
 	return st
 }
 
-func (s *linuxSystem) Online() bool                            { return internetUp() }
+func (s *linuxSystem) InternetCheck() error                    { return internetCheck() }
 func (s *linuxSystem) WifiScan() ([]installui.WifiNet, error)  { return wifiScan() }
 func (s *linuxSystem) WifiConnect(ssid, password string) error { return wifiConnect(ssid, password) }
 
