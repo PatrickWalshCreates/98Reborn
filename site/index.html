@@ -75,13 +75,13 @@ Booting the patched image...
   <section id="how">
     <div class="wrap">
       <h2>How it works</h2>
-      <p class="sub">A small Linux-based installer boots from USB. It has drivers for every modern network card, so it can go online before Windows is installed. Your 98 SE CD provides the operating system; 98Reborn provides everything else.</p>
+      <p class="sub">One free app, the <strong>98Reborn Tool</strong>, does the prep on the computer you already have (Windows, Mac or Linux). It builds a USB installer from your own Windows 98 SE CD. The installer has modern drivers, so it can go online, check the target PC and fetch what that machine needs before Windows 98 is installed.</p>
       <div class="steps">
-        <div class="card step"><h3>Boot the installer</h3><p>From a USB stick, on BIOS or UEFI. A graphical setup runs on any modern PC.</p></div>
-        <div class="card step"><h3>Check your hardware</h3><p>A compatibility report rates each device green, yellow or red, before anything is installed.</p></div>
-        <div class="card step"><h3>Add your CD</h3><p>Point it at your own 98 SE CD or ISO. It reads the disc directly; no mounting, no extra tools.</p></div>
-        <div class="card step"><h3>Install and patch</h3><p>Setup runs unattended. Then fixes and drivers for your machine are applied, all journalled.</p></div>
-        <div class="card step"><h3>Manage from inside 98</h3><p>The Control Center shows specs, resources and build info, and installs updates and rollbacks.</p></div>
+        <div class="card step"><h3>Check any PC</h3><p>Run the 98Reborn Tool and it grades the computer it's running on, Gold to Bronze, with the reasons why and what to change.</p></div>
+        <div class="card step"><h3>Build your installer</h3><p>Pick your 98 SE CD or ISO. The Tool creates a bootable 98Reborn installer ISO, built on your computer from your disc.</p></div>
+        <div class="card step"><h3>Make a USB stick</h3><p>Write the ISO to a USB drive with Rufus or a similar tool, and boot the target PC from it, on BIOS or UEFI.</p></div>
+        <div class="card step"><h3>Connect and check</h3><p>Go online for the latest drivers and fixes, or skip it to install offline with basic compatibility. The installer grades this exact PC first.</p></div>
+        <div class="card step"><h3>Install and patch</h3><p>Pick Core or Gaming. Setup runs unattended, then fixes and drivers for this machine are applied, every change reversible.</p></div>
       </div>
     </div>
   </section>
@@ -123,7 +123,7 @@ Booting the patched image...
   <section id="hardware">
     <div class="wrap">
       <h2>Will it run on my PC?</h2>
-      <p class="sub">Honest answer: it depends on the machine. These are the tiers 98Reborn targets. A free scanner that grades your PC before you install anything, with the reasons why, is on the way. A hardware compatibility list built from real test reports will follow.</p>
+      <p class="sub">Honest answer: it depends on the machine. These are the tiers 98Reborn targets. The free 98Reborn Tool will grade your PC before you install anything, with the reasons why. A hardware compatibility list built from real test reports will follow.</p>
       <div class="tablewrap">
         <table>
           <thead><tr><th>Tier</th><th>What works</th><th>Typical machine</th></tr></thead>
@@ -149,7 +149,7 @@ Booting the patched image...
         <li><span class="pill done">Done</span><div><strong>Disk tooling</strong><span class="d">Partitioning, FAT32 formatting and long file names, written in-house, so disks are prepared and patched without mounting them.</span></div></li>
         <li><span class="pill done">Done</span><div><strong>Automated test lab</strong><span class="d">A fully unattended 98 SE install in a virtual machine (about 25 minutes), then every module verified inside the running Windows: boot, registry and files.</span></div></li>
         <li><span class="pill wip">In progress</span><div><strong>NVMe support</strong><span class="d">No NVMe driver for Windows 98 exists, so we're building one. Windows 98 already boots from an emulated NVMe drive in the lab. Next: a reliable boot path, then a native driver.</span></div></li>
-        <li><span class="pill wip">In progress</span><div><strong>PC compatibility scanner</strong><span class="d">A small download that checks your PC before you install, and grades it Gold, Silver or Bronze with the reasons why.</span></div></li>
+        <li><span class="pill wip">In progress</span><div><strong>98Reborn Tool</strong><span class="d">Checks a PC and grades it with the reasons why (working on Windows and Linux), and builds your bootable installer ISO from your CD. The ISO builder already rebuilds the 98 SE CD so that it boots exactly like the original.</span></div></li>
         <li><span class="pill wip">Next</span><div><strong>Real-hardware testing</strong><span class="d">A small lab of real PCs covering each tier: legacy boot, AHCI, memory limits, video and 3D performance.</span></div></li>
         <li><span class="pill todo">Planned</span><div><strong>Graphical installer</strong><span class="d">The USB installer with hardware report, networking, driver download and edition choice.</span></div></li>
         <li><span class="pill todo">Planned</span><div><strong>Control Center</strong><span class="d">A native app inside 98 for specs, resource monitoring, build info, updates and rollback.</span></div></li>
