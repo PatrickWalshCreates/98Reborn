@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 98Reborn mark: a CRT monitor with a rebirth arc. Original artwork. -->
+  <rect x="6" y="8" width="52" height="38" rx="5" fill="#0f766e"/>
+  <rect x="11" y="13" width="42" height="28" rx="2" fill="#042f2e"/>
+  <path d="M21 33a11 11 0 1 1 22 0" fill="none" stroke="#5eead4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M43 33l-5-6h10z" fill="#5eead4"/>
+  <rect x="24" y="46" width="16" height="5" fill="#0f766e"/>
+  <rect x="16" y="51" width="32" height="5" rx="2" fill="#0f766e"/>
+</svg>

@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>98Reborn: Windows 98 SE, rebuilt for modern PCs</title>
+  <meta name="description" content="98Reborn is an open-source toolkit that installs a patched, driver-equipped Windows 98 Second Edition on modern hardware, from your own CD.">
+  <meta property="og:title" content="98Reborn">
+  <meta property="og:description" content="Windows 98 SE, rebuilt to install and run on modern PCs. Bring your own CD; no Microsoft files included.">
+  <meta name="theme-color" content="#0f766e">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#"><img src="favicon.svg" alt="">98Reborn</a>
+    <nav class="nav" aria-label="Main">
+      <a href="#how">How it works</a>
+      <a href="#editions">Editions</a>
+      <a href="#hardware">Hardware</a>
+      <a href="#status">Status</a>
+      <a href="#faq">FAQ</a>
+      <a class="gh" href="https://github.com/PatrickWalshCreates/98Reborn">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <div class="wrap">
+      <div>
+        <span class="eyebrow">● Pre-alpha · in active development</span>
+        <h1>Windows 98 SE,<br><em>reborn</em> for modern PCs.</h1>
+        <p class="lede">98Reborn is an open-source toolkit that installs a patched, driver-equipped Windows 98 Second Edition on current hardware, from your own CD. It includes a modern installer, curated fixes, and a gaming edition for the late-90s and early-2000s classics.</p>
+        <div class="actions">
+          <a class="btn primary" href="#status">See what works today</a>
+          <a class="btn" href="https://github.com/PatrickWalshCreates/98Reborn">View source</a>
+        </div>
+      </div>
+      <div class="window" aria-label="Example lab run output">
+        <div class="bar">w9xm lab test --edition gaming<span class="dots"><i></i><i></i><i></i></span></div>
+        <div class="body term"><pre><span class="dim">Copying golden image...</span>
+Applied 5 modules (4 file changes).
+Booting the patched image...
+<span class="dim">[18s]</span> guest: W9XM:READY
+<span class="dim">[20s]</span> guest: W9XM:DONE
+
+<span class="ok">PASS</span>  Windows boots with modules applied
+<span class="ok">PASS</span>  Registry imported at boot
+<span class="ok">PASS</span>  HKCU …\Advanced "HideFileExt"=0
+<span class="ok">PASS</span>  AUTOEXEC.BAT survives a boot
+<span class="ok">PASS</span>  MSDOS.SYS survives a boot
+<span class="ok">PASS</span>  SYSTEM.INI survives a boot</pre></div>
+      </div>
+    </div>
+  </div>
+
+  <section id="why">
+    <div class="wrap">
+      <h2>Why this is hard, and what 98Reborn does about it</h2>
+      <p class="sub">Windows 98's core still runs fine on a fast CPU. What breaks is everything around it: firmware, storage, memory limits and drivers. 98Reborn fixes those, one tested module at a time.</p>
+      <div class="grid c3">
+        <div class="card"><span class="k">Memory</span><h3>RAM and cache limits</h3><p>Stock 98 SE becomes unstable above 512 MB and won't boot above about 1.5 GB. Modules cap usable RAM and the disk cache automatically, based on your machine.</p></div>
+        <div class="card"><span class="k">Speed</span><h3>Fast-CPU crashes</h3><p>Modern processors trip timing bugs that crash 98 at boot. Fixes ship as patches that are checked against your exact files before they're applied.</p></div>
+        <div class="card"><span class="k">Firmware</span><h3>Legacy boot</h3><p>98 needs BIOS-style boot. The installer checks your firmware and tells you what to switch on, or which workaround applies.</p></div>
+        <div class="card"><span class="k">Storage</span><h3>Big disks and SATA</h3><p>Partitioning, FAT32 and the 137 GB limit are handled for you. AHCI-only controllers get a driver, or clear guidance.</p></div>
+        <div class="card"><span class="k">Drivers</span><h3>Matched to your hardware</h3><p>The installer scans your PCI devices and fetches drivers from a signed catalog, so you get what fits your machine, not a guess.</p></div>
+        <div class="card"><span class="k">Safety</span><h3>Every change reversible</h3><p>Each change is a transaction with backups and a journal. Roll back any time, from the installer or from inside Windows.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="wrap">
+      <h2>How it works</h2>
+      <p class="sub">A small Linux-based installer boots from USB. It has drivers for every modern network card, so it can go online before Windows is installed. Your 98 SE CD provides the operating system; 98Reborn provides everything else.</p>
+      <div class="steps">
+        <div class="card step"><h3>Boot the installer</h3><p>From a USB stick, on BIOS or UEFI. A graphical setup runs on any modern PC.</p></div>
+        <div class="card step"><h3>Check your hardware</h3><p>A compatibility report rates each device green, yellow or red, before anything is installed.</p></div>
+        <div class="card step"><h3>Add your CD</h3><p>Point it at your own 98 SE CD or ISO. It reads the disc directly; no mounting, no extra tools.</p></div>
+        <div class="card step"><h3>Install and patch</h3><p>Setup runs unattended. Then fixes and drivers for your machine are applied, all journalled.</p></div>
+        <div class="card step"><h3>Manage from inside 98</h3><p>The Control Center shows specs, resources and build info, and installs updates and rollbacks.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="editions">
+    <div class="wrap">
+      <h2>Two editions, one installer</h2>
+      <p class="sub">Pick an edition during setup. Both are built from the same tested modules.</p>
+      <div class="grid c2">
+        <div class="card edition">
+          <span class="tag">Core</span>
+          <h3>Core</h3>
+          <p>Clean, patched 98 SE with stability fixes for modern hardware, matched drivers and the Control Center. Nothing extra.</p>
+          <ul>
+            <li>RAM cap and disk-cache tuning</li>
+            <li>Boot fixes for modern firmware and video</li>
+            <li>Sensible defaults, such as showing file extensions</li>
+          </ul>
+        </div>
+        <div class="card edition">
+          <span class="tag">Gaming</span>
+          <h3>Gaming</h3>
+          <p>Everything in Core, plus a setup for late-90s and early-2000s PC games.</p>
+          <ul>
+            <li>Startup menu with a real DOS mode for DOS games</li>
+            <li>DirectX 9.0c and period runtimes</li>
+            <li>Sound Blaster emulation and 3D options for your GPU <em>(planned)</em></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="hardware">
+    <div class="wrap">
+      <h2>Will it run on my PC?</h2>
+      <p class="sub">Honest answer: it depends on the machine. These are the tiers 98Reborn targets. A hardware compatibility list built from real test reports will follow.</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Tier</th><th>What works</th><th>Typical machine</th></tr></thead>
+          <tbody>
+            <tr><td><span class="tier t-gold">Gold</span></td><td>Everything, including hardware 3D</td><td>Board with legacy boot (CSM) and SATA IDE mode, a 98-compatible PCIe graphics card, and a supported network card</td></tr>
+            <tr><td><span class="tier t-silver">Silver</span></td><td>Stable desktop; 2D or software 3D; some devices unsupported</td><td>Most desktops from 2015–2022 with legacy boot</td></tr>
+            <tr><td><span class="tier t-bronze">Bronze</span></td><td>Boots with workarounds; limited</td><td>Newer UEFI-only machines and recent laptops</td></tr>
+            <tr><td><span class="tier t-no">Not yet</span></td><td>—</td><td>NVMe-only systems with no SATA, ARM computers</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="status">
+    <div class="wrap">
+      <h2>Where the project is today</h2>
+      <p class="sub">98Reborn is pre-alpha: there's no download yet. Here's exactly what's built and tested so far, and what's next.</p>
+      <ul class="status-list">
+        <li><span class="pill done">Done</span><div><strong>Patch engine</strong><span class="d">Modules with hardware conditions and parameters, dry-run diffs, journalled apply and one-command rollback. Runs on Windows, macOS and Linux.</span></div></li>
+        <li><span class="pill done">Done</span><div><strong>Reads your original CD</strong><span class="d">ISO 9660 and Joliet, plus Microsoft's multi-cabinet LZX and MSZIP archives. Verified: every setup file on the 98 SE and Me discs extracts, checked against thousands of program checksums.</span></div></li>
+        <li><span class="pill done">Done</span><div><strong>Disk tooling</strong><span class="d">Partitioning, FAT32 formatting and long file names, written in-house, so disks are prepared and patched without mounting them.</span></div></li>
+        <li><span class="pill done">Done</span><div><strong>Automated test lab</strong><span class="d">A fully unattended 98 SE install in a virtual machine (about 25 minutes), then every module verified inside the running Windows: boot, registry and files.</span></div></li>
+        <li><span class="pill wip">Next</span><div><strong>Real-hardware testing</strong><span class="d">A small lab of real PCs covering each tier: legacy boot, AHCI, memory limits, video and 3D performance.</span></div></li>
+        <li><span class="pill todo">Planned</span><div><strong>Graphical installer</strong><span class="d">The USB installer with hardware report, networking, driver download and edition choice.</span></div></li>
+        <li><span class="pill todo">Planned</span><div><strong>Control Center</strong><span class="d">A native app inside 98 for specs, resource monitoring, build info, updates and rollback.</span></div></li>
+        <li><span class="pill todo">Planned</span><div><strong>Drivers</strong><span class="d">A signed driver catalog, plus new open-source drivers where none exist, starting with USB 3.0.</span></div></li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="legal">
+    <div class="wrap">
+      <h2>Bring your own Windows</h2>
+      <div class="callout">
+        <p><strong>98Reborn contains no Microsoft code and never will.</strong> You supply your own Windows 98 Second Edition CD or ISO and product key. The installer patches your copy on your machine.</p>
+        <p>Fixes to Microsoft files ship as small binary differences that only apply to the exact original file, so they can't recreate it on their own. Our own replacement drivers are written from scratch and are open source. Third-party components are only included where their licence allows; otherwise the installer fetches them from the original source, with your consent.</p>
+        <p>98Reborn is an independent project. It is not affiliated with or endorsed by Microsoft. "Windows" is a trademark of Microsoft Corporation and is used here only to describe compatibility.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="dev">
+    <div class="wrap">
+      <h2>Try the toolkit</h2>
+      <p class="sub">There's no end-user release yet, but developers can already build the toolkit and run the test lab. You need Go and QEMU.</p>
+      <pre class="code"><span class="c"># build the toolkit</span>
+cd installer/backend &amp;&amp; go build -o w9xm ./cmd/w9xm
+
+<span class="c"># look inside your own 98 SE CD</span>
+./w9xm media info "Windows 98 Second Edition.iso"
+
+<span class="c"># unattended install in QEMU, then test the Gaming edition inside Windows</span>
+./w9xm lab install --iso "Windows 98 Second Edition.iso" --accept-eula --out lab
+./w9xm lab test --edition gaming --out lab</pre>
+      <p class="sub" style="margin-top:16px">See <a href="https://github.com/PatrickWalshCreates/98Reborn/blob/main/docs/PLAN.md">the plan</a>, <a href="https://github.com/PatrickWalshCreates/98Reborn/blob/main/docs/MODULES.md">module format</a> and <a href="https://github.com/PatrickWalshCreates/98Reborn/blob/main/docs/LAB.md">test lab</a> docs.</p>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap">
+      <h2>FAQ</h2>
+      <details><summary>Why 98 SE and not Windows Me?</summary><p>98 SE can boot to real DOS, which DOS games and Sound Blaster emulation need. It's also more stable, and most community fixes target it. Your Me disc is still useful: modules can borrow newer components from it, such as its USB stack.</p></details>
+      <details><summary>Can I download a ready-made ISO?</summary><p>No. Distributing Windows itself would be copyright infringement. When 98Reborn is released, you'll download our installer, which contains only open-source code, and use it with your own CD.</p></details>
+      <details><summary>Will my graphics card do 3D?</summary><p>Modern NVIDIA, AMD and Intel GPUs have no Windows 98 drivers. Expect 2D on those, with software 3D being evaluated. For full hardware 3D, a period-compatible PCIe card is the reliable route.</p></details>
+      <details><summary>Is it safe to connect to the internet?</summary><p>Windows 98 hasn't had security updates in decades. Use it offline or behind a router, never directly exposed. The installer goes online only before Windows is installed, to fetch drivers, and updates are cryptographically signed.</p></details>
+      <details><summary>Does it work in a virtual machine?</summary><p>Yes. The project's own test lab installs and boots 98 SE in QEMU on every change, and VM support will ship as a first-class target.</p></details>
+      <details><summary>How can I help?</summary><p>Hardware test reports, driver research and module authoring are all welcome once the repository opens up. Watch the GitHub repo for the first public release.</p></details>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>98Reborn</strong> · open source · <a href="https://github.com/PatrickWalshCreates/98Reborn">GitHub</a></p>
+    <p>Not affiliated with Microsoft. Windows is a trademark of Microsoft Corporation. Bring your own licensed copy of Windows 98 Second Edition.</p>
+  </div>
+</footer>
+
+</body>
+</html>
