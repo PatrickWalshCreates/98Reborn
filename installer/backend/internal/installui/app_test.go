@@ -14,6 +14,9 @@ type fake struct{}
 
 func (fake) Prepare(s func(string)) (*Medium, error) { s("x"); return &Medium{HasSetup: true}, nil }
 func (fake) Connect() NetState                       { return NetState{Online: true} }
+func (fake) Online() bool                            { return true }
+func (fake) WifiScan() ([]WifiNet, error)            { return nil, nil }
+func (fake) WifiConnect(string, string) error        { return nil }
 func (fake) Check() *compat.Report                   { return compat.Evaluate(&compat.Scan{Arch: "x86_64"}) }
 func (fake) Disks() []*disk.Disk {
 	return []*disk.Disk{{Name: "sda", Bus: "sata", Size: 100 << 30, LogicalSec: 512, Table: disk.TableNone}}

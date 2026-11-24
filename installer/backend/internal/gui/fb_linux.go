@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -176,25 +177,68 @@ type Input struct {
 
 func OpenInput(w, h int) *Input {
 	in := &Input{C: make(chan Event, 64), x: w / 2, y: h / 2, w: w, h: h}
-	devs, _ := filepath.Glob("/dev/input/event*")
-	for _, d := range devs {
-		f, err := os.Open(d)
-		if err != nil {
-			continue
-		}
-		go in.read(f)
-	}
+	go in.watch()
 	return in
+}
+
+// watch opens input devices as they appear: drivers for touchpads and USB
+// mice can come up after the screen does, and mice can be plugged in later.
+func (in *Input) watch() {
+	seen := map[string]bool{}
+	for {
+		devs, _ := filepath.Glob("/dev/input/event*")
+		for _, d := range devs {
+			in.mu.Lock()
+			known := seen[d]
+			in.mu.Unlock()
+			if known {
+				continue
+			}
+			f, err := os.Open(d)
+			if err != nil {
+				continue
+			}
+			in.mu.Lock()
+			seen[d] = true
+			in.mu.Unlock()
+			go func(name string) {
+				in.read(f)
+				f.Close()
+				in.mu.Lock()
+				delete(seen, name) // gone (unplugged): reopen if it returns
+				in.mu.Unlock()
+			}(d)
+		}
+		time.Sleep(2 * time.Second)
+	}
 }
 
 type absInfo struct{ Value, Min, Max, Fuzz, Flat, Res int32 }
 
+// device is the state of one input device.
+type device struct {
+	ax, ay   absInfo
+	abs      bool // reports absolute X/Y
+	touchpad bool // absolute, but moves the pointer relatively (like a mouse)
+	// touchpad tracking
+	touching     bool
+	lastX, lastY int32
+	haveX, haveY bool
+	downAt       time.Time
+	moved        int
+}
+
+func hasKey(bits []byte, code int) bool { return code/8 < len(bits) && bits[code/8]&(1<<(code%8)) != 0 }
+
 func (in *Input) read(f *os.File) {
-	// Absolute axes (touch screens, tablets, QEMU's usb-tablet): learn their range.
-	var ax, ay absInfo
-	hasAbs := ioctl(f.Fd(), 0x80184540, unsafe.Pointer(&ax)) == nil && ax.Max > ax.Min // EVIOCGABS(ABS_X)
-	if hasAbs {
-		ioctl(f.Fd(), 0x80184541, unsafe.Pointer(&ay)) // EVIOCGABS(ABS_Y)
+	d := &device{}
+	d.abs = ioctl(f.Fd(), 0x80184540, unsafe.Pointer(&d.ax)) == nil && d.ax.Max > d.ax.Min // EVIOCGABS(ABS_X)
+	if d.abs {
+		ioctl(f.Fd(), 0x80184541, unsafe.Pointer(&d.ay)) // EVIOCGABS(ABS_Y)
+		keys := make([]byte, 96)
+		if ioctl(f.Fd(), 0x80604521, unsafe.Pointer(&keys[0])) == nil { // EVIOCGBIT(EV_KEY, 96)
+			d.touchpad = hasKey(keys, 0x145) // BTN_TOOL_FINGER: a touchpad, not a tablet or screen
+		}
 	}
 	buf := make([]byte, 24*64)
 	for {
@@ -206,7 +250,7 @@ func (in *Input) read(f *os.File) {
 			typ := binary.LittleEndian.Uint16(buf[i+16:])
 			code := binary.LittleEndian.Uint16(buf[i+18:])
 			val := int32(binary.LittleEndian.Uint32(buf[i+20:]))
-			in.handle(typ, code, val, hasAbs, ax, ay)
+			in.handle(d, typ, code, val)
 		}
 	}
 }
@@ -218,38 +262,78 @@ func (in *Input) send(e Event) {
 	}
 }
 
-func (in *Input) handle(typ, code uint16, val int32, hasAbs bool, ax, ay absInfo) {
+func (in *Input) move(dx, dy int) {
+	in.x = max(0, min(in.w-1, in.x+dx))
+	in.y = max(0, min(in.h-1, in.y+dy))
+	in.send(Event{Mouse: true, X: in.x, Y: in.y})
+}
+
+func (in *Input) handle(d *device, typ, code uint16, val int32) {
 	in.mu.Lock()
 	defer in.mu.Unlock()
 	switch typ {
 	case evRel:
 		switch code {
 		case 0:
-			in.x = max(0, min(in.w-1, in.x+int(val)))
+			in.move(int(val), 0)
 		case 1:
-			in.y = max(0, min(in.h-1, in.y+int(val)))
-		default:
-			return
+			in.move(0, int(val))
 		}
-		in.send(Event{Mouse: true, X: in.x, Y: in.y})
 	case evAbs:
-		if !hasAbs {
+		if !d.abs || code > 1 {
 			return
 		}
-		switch code {
-		case 0:
-			in.x = int(int64(val-ax.Min) * int64(in.w-1) / int64(ax.Max-ax.Min))
-		case 1:
-			in.y = int(int64(val-ay.Min) * int64(in.h-1) / int64(ay.Max-ay.Min))
-		default:
+		if d.touchpad {
+			// Relative movement while a finger is down; the whole pad
+			// width moves the pointer about 1.5 screen widths.
+			span := int64(max(1, d.ax.Max-d.ax.Min))
+			if code == 0 {
+				if d.haveX && d.touching {
+					dx := int(int64(val-d.lastX) * int64(in.w) * 3 / 2 / span)
+					d.moved += abs(dx)
+					in.move(dx, 0)
+				}
+				d.lastX, d.haveX = val, true
+			} else {
+				if d.haveY && d.touching {
+					dy := int(int64(val-d.lastY) * int64(in.w) * 3 / 2 / span)
+					d.moved += abs(dy)
+					in.move(0, dy)
+				}
+				d.lastY, d.haveY = val, true
+			}
 			return
+		}
+		if code == 0 {
+			in.x = int(int64(val-d.ax.Min) * int64(in.w-1) / int64(d.ax.Max-d.ax.Min))
+		} else {
+			in.y = int(int64(val-d.ay.Min) * int64(in.h-1) / int64(max(1, d.ay.Max-d.ay.Min)))
 		}
 		in.send(Event{Mouse: true, X: in.x, Y: in.y})
 	case evKey:
-		if code == 0x110 || code == 0x14a { // BTN_LEFT, BTN_TOUCH
+		switch {
+		case code == 0x110: // BTN_LEFT (mouse button, clickpad press)
 			if val == 1 {
 				in.send(Event{Mouse: true, X: in.x, Y: in.y, Click: true})
 			}
+			return
+		case code == 0x14a: // BTN_TOUCH
+			if d.touchpad {
+				if val == 1 {
+					d.touching, d.haveX, d.haveY = true, false, false
+					d.downAt, d.moved = time.Now(), 0
+				} else {
+					d.touching = false
+					// A short, still touch is a tap: click.
+					if time.Since(d.downAt) < 220*time.Millisecond && d.moved < 12 {
+						in.send(Event{Mouse: true, X: in.x, Y: in.y, Click: true})
+					}
+				}
+			} else if val == 1 { // touch screen / tablet: touching is clicking
+				in.send(Event{Mouse: true, X: in.x, Y: in.y, Click: true})
+			}
+			return
+		case code >= 0x100 && code < 0x160: // other buttons and tools
 			return
 		}
 		if code == 42 || code == 54 { // shifts
@@ -263,6 +347,13 @@ func (in *Input) handle(typ, code uint16, val int32, hasAbs bool, ax, ay absInfo
 			in.send(e)
 		}
 	}
+}
+
+func abs(v int) int {
+	if v < 0 {
+		return -v
+	}
+	return v
 }
 
 // US keyboard layout (Linux key codes).

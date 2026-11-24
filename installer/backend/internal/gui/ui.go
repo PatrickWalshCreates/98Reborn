@@ -49,6 +49,7 @@ type UI struct {
 	typed          []rune
 	keys           []int
 	enterUsed      bool
+	focusNext      bool
 }
 
 func NewUI(c *Canvas, t *Theme) *UI { return &UI{C: c, T: t, MouseX: -1, MouseY: -1} }
@@ -105,6 +106,14 @@ func (u *UI) Key(k int) bool {
 	for i, x := range u.keys {
 		if x == k {
 			u.keys = append(u.keys[:i], u.keys[i+1:]...)
+			if k == KeySpace { // used as an action: it isn't typing too
+				for j, r := range u.typed {
+					if r == ' ' {
+						u.typed = append(u.typed[:j], u.typed[j+1:]...)
+						break
+					}
+				}
+			}
 			return true
 		}
 	}
@@ -118,8 +127,15 @@ func (u *UI) Focus(n int) { u.focus = n }
 func (u *UI) take() (idx int, focused bool) {
 	idx = u.nfocus
 	u.nfocus++
+	if u.focusNext {
+		u.focus, u.focusNext = idx, false
+	}
 	return idx, idx == u.focus
 }
+
+// FocusNext gives keyboard focus to the next widget drawn (e.g. a password
+// field that just appeared).
+func (u *UI) FocusNext() { u.focusNext = true }
 
 func (u *UI) clicked(r Rect) bool { return u.click && r.Contains(u.clickX, u.clickY) }
 

@@ -29,7 +29,15 @@ func (m mock) Prepare(status func(string)) (*installui.Medium, error) {
 	status("Windows 98 SE setup files: 77 cabinets")
 	return &installui.Medium{Device: "sdb1", Version: "0.1.0-dev", HasSetup: true, Cabs: 77}, nil
 }
-func (mock) Connect() installui.NetState { return installui.NetState{Wired: []string{"eth0"}} }
+func (mock) Connect() installui.NetState {
+	return installui.NetState{Wired: []string{"eth0"}, Wireless: []string{"wlan0"}}
+}
+func (mock) Online() bool { return true }
+func (mock) WifiScan() ([]installui.WifiNet, error) {
+	return []installui.WifiNet{{SSID: "HomeNetwork", Signal: -48, Secured: true}, {SSID: "Neighbors 5G", Signal: -67, Secured: true},
+		{SSID: "Coffee Shop Guest", Signal: -78}}, nil
+}
+func (mock) WifiConnect(string, string) error { return nil }
 func (mock) Check() *compat.Report {
 	return compat.Evaluate(&compat.Scan{OS: "98Reborn Installer", Arch: "x86_64", CPU: "Intel Core i5-4590 @ 3.30GHz", CPUMHz: 3300, RAMMB: 8192,
 		Firmware: "uefi", SecureBoot: "off", Virtualization: "on", IOMMU: "on",
@@ -91,9 +99,15 @@ func main() {
 			}
 		}
 		enter := gui.Event{Key: gui.KeyEnter}
+		installui.Splash(c, t, 3, "Starting the installer")
+		c.SavePNG(filepath.Join(*out, fmt.Sprintf("%dx%d-0-splash.png", sz[0], sz[1])))
 		shot("1-welcome")
 		shot("2-network", enter)
 		a.Frame(u, nil)
+		// Pick the first Wi-Fi network with the mouse and type a password.
+		time.Sleep(80 * time.Millisecond)
+		a.Frame(u, nil)
+		shot("2b-wifi-list")
 		shot("3-check", gui.Event{Key: gui.KeyTab}, gui.Event{Key: gui.KeyTab}, enter) // "Continue without internet"
 		shot("4-disk", enter)
 		shot("5-details", enter)

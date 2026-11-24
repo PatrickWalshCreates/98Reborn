@@ -18,6 +18,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -43,7 +44,8 @@ type Options struct {
 // Packages in the live system. Their dependencies are added automatically.
 var rootPackages = []string{"busybox", "busybox-binsh", "musl", "kmod", "qemu-system-i386", "ca-certificates-bundle",
 	"ntfs-3g-progs", "e2fsprogs", // shrinking Windows / Linux partitions for multi-boot
-	"efibootmgr"} // registering 98Reborn Boot with UEFI firmware
+	"efibootmgr",                                        // registering 98Reborn Boot with UEFI firmware
+	"wpa_supplicant", "iw", "wireless-regdb", "hostapd"} // Wi-Fi (hostapd: the simulated test access point)
 
 // Dependencies we leave out on purpose (boot-time tooling of a normal Alpine).
 var skipDeps = map[string]bool{"initramfs-generator": true, "mkinitfs": true, "linux-firmware-any": true}
@@ -65,13 +67,23 @@ var modulePrefixes = []string{
 	"fs/isofs/", "fs/fat/", "fs/exfat/", "fs/nls/", "fs/udf/", "fs/ntfs3/", "fs/overlayfs/",
 	"fs/ext4/", "fs/jbd2/", "fs/btrfs/", "fs/xfs/", // recognizing installed Linux systems
 	"arch/x86/kvm/", "net/packet/",
+	// Laptop touchpads: I2C-HID behind Intel LPSS / AMD I2C controllers.
+	"drivers/i2c/", "drivers/mfd/", "drivers/pinctrl/", "drivers/dma/",
+	// Wi-Fi: Intel, MediaTek, Realtek, Qualcomm, plus the simulated radio for tests.
+	"drivers/net/wireless/intel/iwlwifi/", "drivers/net/wireless/mediatek/mt76/",
+	"drivers/net/wireless/realtek/rtw88/", "drivers/net/wireless/realtek/rtw89/",
+	"drivers/net/wireless/ath/", "drivers/net/wireless/virtual/",
+	"net/wireless/", "net/mac80211/", "net/rfkill/", "net/qrtr/", "drivers/bus/mhi/",
+	// Ciphers the Wi-Fi stack loads by name at run time (WPA2/WPA3: CCMP,
+	// GCMP, CMAC), so they aren't in modules.dep.
+	"crypto/", "arch/x86/crypto/", "lib/crypto/",
 }
 
 // Paths dropped from packages to keep the image small.
 var dropPrefixes = []string{"usr/share/man/", "usr/share/doc/", "usr/share/info/", "usr/include/",
 	"usr/share/locale/", "usr/lib/pkgconfig/", "usr/share/bash-completion/", "usr/share/zsh/"}
 
-const cmdline = "console=tty1 console=ttyS0,115200 loglevel=3"
+const cmdline = "console=tty1 console=ttyS0,115200 loglevel=3 quiet vt.global_cursor_default=0"
 
 func (o *Options) logf(f string, a ...any) {
 	if o.Log != nil {
@@ -204,6 +216,19 @@ func Build(o Options) error {
 			files["98reborn/boot/"+v.Name] = vb
 		}
 	}
+	// Wi-Fi firmware lives on the medium (98reborn/firmware), not in the
+	// initramfs: the installer points the kernel there once it has found
+	// the medium, then loads the Wi-Fi drivers.
+	fw, err := wifiFirmware(c)
+	if err != nil {
+		return err
+	}
+	var fwBytes int64
+	for p, b := range fw {
+		files["98reborn/firmware/"+p] = b
+		fwBytes += int64(len(b))
+	}
+	o.logf("Wi-Fi firmware: %d files, %d MB", len(fw), fwBytes>>20)
 	for dir, dst := range map[string]string{o.Modules: "98reborn/modules", o.Editions: "98reborn/editions"} {
 		if dir == "" {
 			continue
@@ -477,3 +502,104 @@ It works on BIOS and UEFI PCs (turn Secure Boot off).
 This medium was made by the 98Reborn Tool. The installer is open source:
 https://github.com/PatrickWalshCreates/98Reborn
 `
+
+// Wi-Fi firmware packages, with the files to keep from each (prefixes below
+// lib/firmware/). Intel's package is mostly non-Wi-Fi, so only iwlwifi stays.
+var wifiFirmwarePackages = map[string][]string{
+	"linux-firmware-intel":    {"iwlwifi-", "intel/iwlwifi/"},
+	"linux-firmware-mediatek": {"mediatek/WIFI_", "mediatek/mt7"},
+	"linux-firmware-rtw88":    {"rtw88/"},
+	"linux-firmware-rtw89":    {"rtw89/"},
+	"linux-firmware-ath10k":   {"ath10k/"},
+	"linux-firmware-ath11k":   {"ath11k/"},
+	"linux-firmware-ath12k":   {"ath12k/"},
+}
+
+// wifiFirmware returns firmware files by path below lib/firmware. Symbolic
+// links are resolved to copies (ISO 9660 has none).
+func wifiFirmware(c *apk.Client) (map[string][]byte, error) {
+	out := map[string][]byte{}
+	links := map[string]string{}
+	for name, keep := range wifiFirmwarePackages {
+		p := c.Lookup(name)
+		if p == nil {
+			return nil, fmt.Errorf("package %s not found", name)
+		}
+		raw, err := c.Fetch(p)
+		if err != nil {
+			return nil, err
+		}
+		err = apk.Unpack(raw, func(e apk.Entry) error {
+			rel, ok := strings.CutPrefix(e.Path, "lib/firmware/")
+			if !ok {
+				return nil
+			}
+			wanted := false
+			for _, k := range keep {
+				if strings.HasPrefix(rel, k) {
+					wanted = true
+				}
+			}
+			switch {
+			case !wanted:
+			case e.Type == '0' || e.Type == 0:
+				out[rel] = e.Data
+			case e.Type == '2':
+				links[rel] = path.Join(path.Dir(rel), e.Link)
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	for l, target := range links {
+		if b, ok := out[path.Clean(target)]; ok {
+			out[l] = b
+		}
+	}
+	for p := range out {
+		// The kernel asks for iwlwifi files by their top-level names; the
+		// intel/iwlwifi/ originals would only double the size.
+		if strings.HasPrefix(p, "intel/iwlwifi/") {
+			delete(out, p)
+		}
+		// Router and phone chips, never in a PC.
+		for _, skip := range []string{"/IPQ", "/QCN", "/QCA99", "/QCA4019", "/QCA9888", "/QCA9984", "/WCN3990", "/WCN6750",
+			"mediatek/mt7915", "mediatek/mt7916", "mediatek/mt7981", "mediatek/mt7986", "mediatek/mt7988", "mediatek/mt7990", "mediatek/mt7992", "mediatek/mt7996"} {
+			if strings.Contains(p, skip) {
+				delete(out, p)
+			}
+		}
+	}
+	keepNewestIwlwifi(out, 2)
+	return out, nil
+}
+
+// keepNewestIwlwifi keeps the n newest firmware versions of each Intel chip
+// (iwlwifi-<chip>-<version>.ucode[.zst]); the driver tries newest first.
+func keepNewestIwlwifi(fw map[string][]byte, n int) {
+	type ver struct {
+		v    int
+		name string
+	}
+	by := map[string][]ver{}
+	for p := range fw {
+		if !strings.HasPrefix(p, "iwlwifi-") || !strings.Contains(p, ".ucode") {
+			continue
+		}
+		base := strings.SplitN(p, ".ucode", 2)[0]
+		i := strings.LastIndexByte(base, '-')
+		v, err := strconv.Atoi(base[i+1:])
+		if i < 0 || err != nil {
+			continue
+		}
+		by[base[:i]] = append(by[base[:i]], ver{v, p})
+	}
+	for _, vs := range by {
+		sort.Slice(vs, func(i, j int) bool { return vs[i].v > vs[j].v })
+		for _, old := range vs[min(n, len(vs)):] {
+			delete(fw, old.name)
+		}
+	}
+}

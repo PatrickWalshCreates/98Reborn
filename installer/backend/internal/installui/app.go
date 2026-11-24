@@ -26,6 +26,13 @@ type Medium struct {
 	Cabs     int
 }
 
+// WifiNet is a Wi-Fi network in range.
+type WifiNet struct {
+	SSID    string
+	Signal  int // dBm
+	Secured bool
+}
+
 // NetState is the result of trying to get online.
 type NetState struct {
 	Online   bool
@@ -47,6 +54,9 @@ type Request struct {
 type System interface {
 	Prepare(status func(string)) (*Medium, error) // drivers, find the medium
 	Connect() NetState
+	Online() bool // a quick internet check
+	WifiScan() ([]WifiNet, error)
+	WifiConnect(ssid, password string) error
 	Check() *compat.Report
 	Disks() []*disk.Disk
 	Install(r Request, stage func(string)) error
@@ -90,6 +100,15 @@ type App struct {
 	net     *NetState
 	offline bool
 
+	wifiNets     []WifiNet
+	wifiScanning bool
+	wifiPick     int
+	wifiPass     string
+	wifiJoining  bool
+	wifiJoined   string
+	wifiErr      string
+	focusPass    bool
+
 	report  *compat.Report
 	scroll  int
 	disks   []*disk.Disk
@@ -122,7 +141,7 @@ var TimeZones = []struct{ Label, Setup string }{
 }
 
 func New(sys System, t *gui.Theme) *App {
-	return &App{Sys: sys, T: t, edition: "core", name: "98Reborn User", computer: "RETRO98", makeDef: true, regBoot: true, pick: -1}
+	return &App{Sys: sys, T: t, edition: "core", name: "98Reborn User", computer: "RETRO98", makeDef: true, regBoot: true, pick: -1, wifiPick: -1}
 }
 
 // Theme returns the installer theme with fonts sized for a w×h screen.
@@ -372,22 +391,30 @@ func (a *App) welcome(u *gui.UI, r, btn gui.Rect) {
 func (a *App) network(u *gui.UI, r, btn gui.Rect) {
 	c, t := u.C, a.T
 	y := a.heading(c, r, "Connect to the internet",
-		"With internet, the installer can download drivers and fixes for this exact PC. Plug in an Ethernet cable now if you can.")
+		"With internet, the installer can download drivers and fixes for this exact PC. Plug in Ethernet, or choose a Wi-Fi network.")
+	online := a.net != nil && a.net.Online
 	switch {
 	case a.netBusy:
 		a.spinner(c, r.X-2, y, t.Body.H)
 		c.Text(t.Body, r.X+t.Body.H+10, y, "Connecting…", t.Text)
-	case a.net != nil && a.net.Online:
-		a.note(c, gui.R(r.X, y, r.W, 0), "Connected to the internet.", t.Ok, t.OkSoft)
-	case a.net != nil:
-		msg := "No internet connection. Check the Ethernet cable and try again."
-		if len(a.net.Wired) == 0 && len(a.net.Wireless) > 0 {
-			msg = "This PC only has Wi-Fi, which this installer can't use yet. A USB Ethernet adapter works."
-		} else if len(a.net.Wired) == 0 {
-			msg = "No network adapter was found."
+	case online:
+		msg := "Connected to the internet."
+		if a.wifiJoined != "" {
+			msg = "Connected to the internet through Wi-Fi (" + a.wifiJoined + ")."
 		}
-		y += a.note(c, gui.R(r.X, y, r.W, 0), msg, t.Warn, t.WarnSoft) + 14
-		y += a.note(c, gui.R(r.X, y, r.W, 0), "You can continue without internet, but compatibility will be minimal: no driver downloads and no fixes newer than this installer. Windows 98 may not work properly on this PC.", t.Bad, t.BadSoft) + 18
+		a.note(c, gui.R(r.X, y, r.W, 0), msg, t.Ok, t.OkSoft)
+	case a.net != nil:
+		if len(a.net.Wireless) > 0 {
+			y = a.wifiPicker(u, gui.R(r.X, y, r.W, r.Y+r.H-y), btn.H)
+		} else {
+			msg := "No internet connection. Check the Ethernet cable and try again."
+			if len(a.net.Wired) == 0 {
+				msg = "No network adapter was found."
+			}
+			y += a.note(c, gui.R(r.X, y, r.W, 0), msg, t.Warn, t.WarnSoft) + 14
+		}
+		y += 6
+		y += a.note(c, gui.R(r.X, y, r.W, 0), "You can continue without internet, but compatibility will be minimal: no driver downloads and no fixes newer than this installer. Windows 98 may not work properly on this PC.", t.Bad, t.BadSoft) + 14
 		bw := t.Bold.Width("Try again") + 48
 		if u.Button(gui.R(r.X, y, bw, btn.H), "Try again", false, true) {
 			a.startConnect()
@@ -400,7 +427,6 @@ func (a *App) network(u *gui.UI, r, btn gui.Rect) {
 			u.Focus(-1)
 		}
 	}
-	online := a.net != nil && a.net.Online
 	back, next := a.nav(u, btn, true, "Next >", online)
 	if back {
 		a.step = stWelcome
@@ -410,6 +436,147 @@ func (a *App) network(u *gui.UI, r, btn gui.Rect) {
 		a.startCheck()
 		u.Focus(-1)
 	}
+}
+
+func (a *App) startWifiScan() {
+	a.wifiScanning, a.wifiErr = true, ""
+	go func() {
+		nets, err := a.Sys.WifiScan()
+		a.mu.Lock()
+		if nets == nil {
+			nets = []WifiNet{} // scanned: found none (nil means "not scanned yet")
+		}
+		a.wifiNets, a.wifiScanning = nets, false
+		if err != nil {
+			a.wifiErr = err.Error()
+		}
+		if a.wifiPick >= len(nets) {
+			a.wifiPick = -1
+		}
+		a.mu.Unlock()
+	}()
+}
+
+func (a *App) startWifiJoin(n WifiNet, pass string) {
+	a.wifiJoining, a.wifiErr = true, ""
+	go func() {
+		err := a.Sys.WifiConnect(n.SSID, pass)
+		online := err == nil && a.Sys.Online()
+		a.mu.Lock()
+		a.wifiJoining = false
+		switch {
+		case err != nil:
+			a.wifiErr = err.Error()
+		case !online:
+			a.wifiErr = "Joined " + n.SSID + ", but it has no internet access."
+		default:
+			a.wifiJoined = n.SSID
+			a.net.Online = true
+		}
+		a.mu.Unlock()
+	}()
+}
+
+// signalBars draws 0-4 bars for a signal strength in dBm.
+func (a *App) signalBars(c *gui.Canvas, x, y, h, dbm int) {
+	n := 1
+	switch {
+	case dbm >= -55:
+		n = 4
+	case dbm >= -65:
+		n = 3
+	case dbm >= -75:
+		n = 2
+	}
+	for i := 0; i < 4; i++ {
+		bh := h * (i + 1) / 4
+		col := a.T.Border
+		if i < n {
+			col = a.T.Accent
+		}
+		c.Fill(gui.R(x+i*6, y+h-bh, 4, bh), col)
+	}
+}
+
+// wifiPicker lists Wi-Fi networks; choosing one asks for its password.
+func (a *App) wifiPicker(u *gui.UI, r gui.Rect, btnH int) int {
+	c, t := u.C, a.T
+	y := r.Y
+	if a.wifiNets == nil && !a.wifiScanning && a.wifiErr == "" {
+		a.startWifiScan()
+	}
+	c.Text(t.Bold, r.X, y, "Wi-Fi networks", t.Text)
+	rw := t.Bold.Width("Refresh") + 32
+	if u.Button(gui.R(r.X+r.W-rw, y-6, rw, t.Bold.H+12), "Refresh", false, !a.wifiScanning && !a.wifiJoining) {
+		a.startWifiScan()
+	}
+	y += t.Bold.H + 14
+	if a.wifiScanning {
+		a.spinner(c, r.X-2, y, t.Body.H)
+		c.Text(t.Body, r.X+t.Body.H+10, y, "Looking for networks…", t.Text)
+		return y + t.Body.H + 16
+	}
+	rowH := t.Body.H + 14
+	maxRows := max(3, (r.H-200)/(rowH+2))
+	if len(a.wifiNets) == 0 && a.wifiErr == "" {
+		c.Text(t.Body, r.X, y, "No networks found. Move closer to the router, then Refresh.", t.Muted)
+		y += t.Body.H + 14
+	}
+	for i, n := range a.wifiNets {
+		if i >= maxRows {
+			break
+		}
+		row := gui.R(r.X, y, r.W, rowH)
+		if u.Row(row, a.wifiPick == i, !a.wifiJoining) && a.wifiPick != i {
+			a.wifiPick, a.wifiPass, a.focusPass = i, "", true
+		}
+		a.signalBars(c, row.X+14, row.Y+(rowH-t.Body.H)/2+2, t.Body.H-4, n.Signal)
+		c.Text(t.Body, row.X+50, row.Y+(rowH-t.Body.H)/2, n.SSID, t.Text)
+		if n.Secured {
+			c.Text(t.Small, row.X+row.W-t.Small.Width("secured")-12, row.Y+(rowH-t.Small.H)/2, "secured", t.Muted)
+		}
+		y += rowH + 2
+	}
+	if a.wifiPick >= 0 && a.wifiPick < len(a.wifiNets) {
+		n := a.wifiNets[a.wifiPick]
+		y += 8
+		cw := t.Bold.Width("Connect") + 48
+		fw := r.W - cw - 12
+		if n.Secured {
+			c.Text(t.Small, r.X, y, "Password for "+n.SSID, t.Muted)
+			y += t.Small.H + 4
+			masked := strings.Repeat("*", len([]rune(a.wifiPass)))
+			shown := masked
+			if a.focusPass {
+				u.FocusNext()
+				a.focusPass = false
+			}
+			if u.Field(gui.R(r.X, y, fw, btnH), &shown, "", 63, nil) {
+				// Field edits the masked copy: apply the change to the real password.
+				rs := []rune(a.wifiPass)
+				switch {
+				case len([]rune(shown)) < len(rs):
+					a.wifiPass = string(rs[:len([]rune(shown))])
+				default:
+					a.wifiPass += string([]rune(shown)[len([]rune(masked)):])
+				}
+			}
+		}
+		ready := !a.wifiJoining && (!n.Secured || len(a.wifiPass) >= 8)
+		if u.Button(gui.R(r.X+r.W-cw, y, cw, btnH), "Connect", true, ready) || ready && u.Key(gui.KeyEnter) {
+			a.startWifiJoin(n, a.wifiPass)
+		}
+		y += btnH + 10
+	}
+	switch {
+	case a.wifiJoining:
+		a.spinner(c, r.X-2, y, t.Body.H)
+		c.Text(t.Body, r.X+t.Body.H+10, y, "Joining the network…", t.Text)
+		y += t.Body.H + 12
+	case a.wifiErr != "":
+		y += a.note(c, gui.R(r.X, y, r.W, 0), a.wifiErr, t.Warn, t.WarnSoft) + 8
+	}
+	return y
 }
 
 var tierColors = map[string][2]gui.Color{
@@ -804,5 +971,28 @@ func (a *App) done(u *gui.UI, r, btn gui.Rect) {
 	}
 	if _, next := a.nav(u, btn, false, "Restart", true); next {
 		go a.Sys.Reboot()
+	}
+}
+
+// Splash draws the start-up screen shown while drivers load.
+func Splash(c *gui.Canvas, t *gui.Theme, tick int, status string) {
+	c.VGradient(gui.R(0, 0, c.W, c.H), t.Desk1, t.Desk2)
+	size := min(c.W, c.H) / 4
+	x, y := (c.W-size)/2, c.H/2-size*3/4
+	c.Logo(x, y, size, t.AccentSoft, 0x042f2e, 0x5eead4)
+	title := "98Reborn"
+	ty := y + size + t.Big.H/2
+	c.Text(t.Big, (c.W-t.Big.Width(title))/2, ty, title, 0xffffff)
+	sy := ty + t.Big.H + 18
+	c.Text(t.Body, (c.W-t.Body.Width(status))/2, sy, status, 0x9fd8d0)
+	// A row of dots, one lit at a time, in the spirit of Windows 98's boot bar.
+	n, dw := 9, 10
+	bx := (c.W - n*(dw+8)) / 2
+	for i := 0; i < n; i++ {
+		col := gui.Color(0x1b5c56)
+		if i == tick%n {
+			col = 0x5eead4
+		}
+		c.Fill(gui.R(bx+i*(dw+8), sy+t.Body.H+20, dw, dw), col)
 	}
 }

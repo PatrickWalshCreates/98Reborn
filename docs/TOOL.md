@@ -159,8 +159,15 @@ well over 100 MB):
 - **Display:** through KMS on `/dev/dri/card0`, which works with the firmware framebuffer driver
   (`simpledrm`) on BIOS (a 1024x768 VESA mode set at boot) and UEFI (the firmware's resolution).
   The legacy `/dev/fb0` path is a fallback.
-- **Input:** evdev keyboards (US layout), mice, touchpads and tablets. Everything works from the
-  keyboard: Tab, arrows, Space, and Enter for Next.
+- **Input:** evdev keyboards (US layout), mice, tablets and laptop touchpads (I2C-HID, moved like a
+  mouse, with tap-to-click). Devices are picked up as their drivers load or when plugged in.
+  Everything also works from the keyboard: Tab, arrows, Space, and Enter for Next.
+- **Wi-Fi:** Intel, MediaTek, Realtek and Qualcomm adapters. The firmware is kept on the medium
+  (`98reborn/firmware`, about 76 MB) and loaded once the installer has found it. The network step
+  lists networks in range and asks for the password; WPA2 and WPA3 (keys derived in the installer,
+  no quoting issues). For tests, `98reborn.testap` on the kernel command line starts a simulated
+  access point ("98Reborn Test", password `retro1998`).
+- **Splash:** the 98Reborn logo with a loading bar appears as soon as the installer starts.
 - **While Setup runs:** the installer shows Setup's own screen in a little monitor.
 - **Previews:** `go run ./cmd/98reborn-ui-preview --out DIR` renders every screen with sample data to
   PNG, on any OS.

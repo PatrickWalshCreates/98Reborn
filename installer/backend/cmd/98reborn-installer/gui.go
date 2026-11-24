@@ -46,6 +46,10 @@ func (s *linuxSystem) Prepare(status func(string)) (*installui.Medium, error) {
 		what = "disc"
 	}
 	status("Found the 98Reborn " + what + " (" + med.Dev + ")")
+	wifiPrepare(med.Mount)
+	if w := wirelessIfaces(); len(w) > 0 {
+		status("Wi-Fi ready (" + strings.Join(w, ", ") + ")")
+	}
 	m := &installui.Medium{Device: med.Dev, Version: med.Base.Version, HasSetup: med.Setup != "", Cabs: med.Cabs}
 	if m.HasSetup {
 		status(fmt.Sprintf("Windows 98 SE setup files: %d cabinets", med.Cabs))
@@ -57,7 +61,8 @@ func (s *linuxSystem) Prepare(status func(string)) (*installui.Medium, error) {
 }
 
 func (s *linuxSystem) Connect() installui.NetState {
-	wired, wireless := ifaces()
+	wired, _ := ifaces()
+	wireless := wirelessIfaces()
 	for _, n := range wired {
 		exec.Command("ip", "link", "set", n, "up").Run()
 		exec.Command("udhcpc", "-i", n, "-f", "-q", "-n", "-t", "4", "-T", "2", "-s", "/usr/share/98reborn/udhcpc.script").Run()
@@ -66,6 +71,10 @@ func (s *linuxSystem) Connect() installui.NetState {
 	marker(map[bool]string{true: "NET online", false: "NET offline"}[st.Online])
 	return st
 }
+
+func (s *linuxSystem) Online() bool                            { return internetUp() }
+func (s *linuxSystem) WifiScan() ([]installui.WifiNet, error)  { return wifiScan() }
+func (s *linuxSystem) WifiConnect(ssid, password string) error { return wifiConnect(ssid, password) }
 
 func (s *linuxSystem) Check() *compat.Report {
 	sc, err := scan.Run()
@@ -175,16 +184,29 @@ func openScreen() *gui.Screen {
 }
 
 func runGUI() bool {
-	// Load drivers first: a display driver taking over from the firmware
-	// framebuffer replaces /dev/fb0.
-	coldplug()
+	// The screen first (the firmware framebuffer is ready at once), with a
+	// splash while the drivers load. Only the firmware framebuffer driver
+	// ships, so nothing replaces the display while we draw.
 	scr := openScreen()
 	if scr == nil {
+		coldplug()
 		return false
 	}
 	marker("GUI " + scr.Info)
 	c := gui.NewCanvas(scr.W, scr.H)
 	t := installui.Theme(scr.W, scr.H)
+	done := make(chan struct{})
+	go func() { coldplug(); close(done) }()
+	for tick := 0; ; tick++ {
+		installui.Splash(c, t, tick, "Starting the installer")
+		scr.Show(c)
+		select {
+		case <-done:
+		case <-time.After(150 * time.Millisecond):
+			continue
+		}
+		break
+	}
 	u := gui.NewUI(c, t)
 	app := installui.New(&linuxSystem{}, t)
 	app.Start()
