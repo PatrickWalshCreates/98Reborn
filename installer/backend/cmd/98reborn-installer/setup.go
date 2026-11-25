@@ -109,6 +109,7 @@ func installFlow(med *medium, rep *compat.Report, auto bool) {
 		fmt.Fprint(out, indent(disk.Layout(d, nil), "    "))
 	}
 	_, allowNVMe := cmdline["98reborn.allow-nvme"]
+	allowNVMe = allowNVMe || rep.Scan.Firmware == "uefi" // 98Reborn Boot's BIOS reaches NVMe
 	opts := disk.Plan(disks, disk.Requirements{AllowNVMe: allowNVMe})
 	fmt.Fprintln(out)
 	var avail []int

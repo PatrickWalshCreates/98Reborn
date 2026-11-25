@@ -202,7 +202,7 @@ func (a *App) startCheck() {
 		d := a.Sys.Disks()
 		a.mu.Lock()
 		a.report, a.disks = r, d
-		a.options = disk.Plan(d, disk.Requirements{})
+		a.options = disk.Plan(d, disk.Requirements{AllowNVMe: a.Sys.UEFI()})
 		a.pick = -1
 		for i, o := range a.options {
 			if o.Recommended {

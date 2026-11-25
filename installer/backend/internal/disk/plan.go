@@ -48,7 +48,7 @@ type Option struct {
 
 // Requirements tune the planner.
 type Requirements struct {
-	AllowNVMe  bool // developer override until the NVMe driver ships
+	AllowNVMe  bool // the PC starts Windows 98 through 98Reborn Boot (UEFI), whose BIOS reaches NVMe drives
 	WantSize   int64
 	LBA48Ready bool // a 48-bit LBA driver is installed: lift the 128 GiB limit
 }
@@ -66,7 +66,7 @@ func diskBlock(d *Disk, r Requirements) string {
 	case d.Bus == "usb" || d.Removable:
 		return "Windows 98 can't start from USB or removable disks"
 	case d.Bus == "nvme" && !r.AllowNVMe:
-		return "NVMe: Windows 98 support for NVMe is still in development"
+		return "NVMe drives need 98Reborn Boot, which runs on UEFI PCs; start the installer in UEFI mode to use this disk"
 	case d.Sectors() < MinSize+align:
 		return "the disk is too small"
 	}

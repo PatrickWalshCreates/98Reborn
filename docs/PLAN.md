@@ -57,7 +57,7 @@ Be upfront with users. Publish a hardware compatibility list (HCL).
 | **Gold** | Everything works, including 3D | Board with CSM and SATA IDE mode, a Win9x-supported PCIe GPU (GeForce 6/7 class), a supported NIC |
 | **Silver** | Works; 2D video (VESA) or software 3D; some devices unsupported | Most 2015–2022 desktops with CSM |
 | **Bronze** | Boots via CSMWrap and AHCI drivers; limited | Class-3 UEFI machines (no CSM), recent laptops |
-| **In development** | NVMe-only PCs (most new machines) | Needs the new NVMe driver: see [NVME.md](NVME.md) |
+| **Bronze / In development** | NVMe-only PCs (most new machines) | UEFI boot: runs in compatibility mode through 98Reborn Boot (Bronze). Legacy/CSM boot: blocked until tested. Native driver: see [NVME.md](NVME.md) |
 | **Unsupported** | ARM | — |
 
 **The GPU problem:** no modern NVIDIA, AMD, or Intel GPU has 9x drivers. Options:

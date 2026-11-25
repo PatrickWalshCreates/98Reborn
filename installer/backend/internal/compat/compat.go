@@ -244,16 +244,26 @@ func Evaluate(s *Scan) *Report {
 	case len(sata) > 0:
 		add(Finding{Area: "Disk", Level: "ok", Cap: Gold, Reason: "SATA disk available for Windows 98: " + strings.Join(sata, ", ") + "."})
 		if len(nvme) > 0 {
-			add(Finding{Area: "Disk", Level: "info", Cap: Gold, Reason: "Your NVMe drive won't be visible to Windows 98 until NVMe support ships; install to the SATA disk."})
+			add(Finding{Area: "Disk", Level: "info", Cap: Gold, Reason: "Install to the SATA disk for full speed: on NVMe, Windows 98 runs in MS-DOS compatibility mode until 98Reborn's native NVMe driver ships."})
 		}
+	case (len(nvme) > 0 || hasNVMeCtl) && s.Firmware == "uefi":
+		// 98Reborn Boot's BIOS (ReBIOS or CSMWrap, both SeaBIOS) drives
+		// NVMe, so Windows 98 starts and runs from it through the BIOS.
+		fix := "It works, just slower; 98Reborn's native NVMe driver will lift this"
+		if hasSATA {
+			fix = "A SATA SSD gives full speed today"
+		}
+		add(Finding{Area: "Disk", Level: "warn", Cap: Bronze,
+			Reason: "Only NVMe storage was found. Windows 98 will run from it in MS-DOS compatibility mode (slower disk access, no 32-bit disk driver yet).",
+			Fix:    fix + "."})
 	case len(nvme) > 0 || hasNVMeCtl:
-		fix := "Add a SATA SSD"
-		if !hasSATA {
-			fix = "This PC has no SATA controller, so NVMe support is required"
+		fix := "Start the installer in UEFI mode (98Reborn Boot reaches NVMe drives there)"
+		if hasSATA {
+			fix += ", or add a SATA SSD"
 		}
 		add(Finding{Area: "Disk", Level: "block", Cap: Dev,
-			Reason: "Only NVMe storage was found. A Windows 98 NVMe driver is being built by 98Reborn but isn't ready yet.",
-			Fix:    fix + ". Follow the project for NVMe support."})
+			Reason: "Only NVMe storage was found, and this PC is booting in Legacy/CSM mode, where Windows 98 can't count on reaching it.",
+			Fix:    fix + "."})
 	case len(s.Disks) == 0:
 		add(Finding{Area: "Disk", Level: "info", Cap: Silver, Reason: "The scanner couldn't list disks; make sure a SATA disk is available."})
 	default:

@@ -51,8 +51,16 @@ func TestTiers(t *testing.T) {
 			scan: Scan{Arch: "x86_64", Firmware: "uefi",
 				PCI:   []Device{{ID: "8086:a7a0", Class: "030000"}, {ID: "144d:a80a", Class: "010802"}, {ID: "8086:51f0", Class: "028000"}, {ID: "8086:51ed", Class: "0c0330"}},
 				Disks: []Disk{{Name: "Samsung PM9A1", Bus: "nvme", SizeGB: 1000}}},
+			want: Bronze,
+			why:  []string{"Disk:warn:Only NVMe", "Network:info:Wi-Fi"},
+		},
+		{
+			name: "NVMe-only laptop booted Legacy/CSM",
+			scan: Scan{Arch: "x86_64", Firmware: "bios",
+				PCI:   []Device{{ID: "144d:a80a", Class: "010802"}},
+				Disks: []Disk{{Name: "Samsung PM9A1", Bus: "nvme", SizeGB: 1000}}},
 			want: Dev,
-			why:  []string{"Disk:block:Only NVMe", "Network:info:Wi-Fi"},
+			why:  []string{"Disk:block:Only NVMe"},
 		},
 		{
 			name: "intel RST raid mode",
