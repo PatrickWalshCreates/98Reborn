@@ -54,6 +54,6 @@
     {"match": "class:0c0300", "area": "USB", "level": "ok", "cap": "gold",
      "reason": "USB 1.1 (UHCI) controller: supported natively."},
     {"match": "class:0c0330", "area": "USB", "level": "info", "cap": "gold",
-     "reason": "USB 3 (xHCI) controller: no Windows 98 driver yet."}
+     "reason": "USB 3 (xHCI) controller: driven by xHCI98, which 98Reborn installs (keyboards, mice, hubs; not USB drives yet)."}
   ]
 }

@@ -6,6 +6,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/win9x-modern/w9xm/internal/install"
 	"os"
 	"sort"
 	"strings"
@@ -234,6 +235,11 @@ func cmdPlan(args []string, apply bool) error {
 	if j == nil {
 		fmt.Println("\nNothing to apply.")
 		return nil
+	}
+	// As the installer does: name this PC's devices in class-wide driver INFs
+	// so Windows installs them without the hardware wizard.
+	if err := install.AddExactIDs(tgt, facts); err != nil {
+		return err
 	}
 	fmt.Printf("\nApplied as transaction %s (%d files). Undo with: w9xm rollback --target %s --tx %s\n",
 		j.ID, len(j.Files), *target, j.ID)

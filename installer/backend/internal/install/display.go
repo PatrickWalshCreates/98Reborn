@@ -10,55 +10,77 @@ import (
 	"github.com/win9x-modern/w9xm/internal/module"
 )
 
-// vesaINF is installed by the display-vesa module.
-const vesaINF = "WINDOWS/INF/98RVESA.INF"
-
-// AddDisplayIDs names this PC's graphics adapters in the VESA driver's INF.
-// Windows 98 installs a driver silently only when the INF lists the device's
-// own hardware ID; a match on the generic class (PCI\CC_0300) brings up the
-// Add New Hardware wizard instead. Adapters that one of Windows' own INFs
+// Drivers whose INFs match a whole device class get this PC's exact
+// devices added. Windows 98 installs a driver silently only when the INF
+// lists the device's own hardware ID; a match on the generic class brings up
+// the Add New Hardware wizard instead. Devices that one of Windows' own INFs
 // already names keep that driver.
-func AddDisplayIDs(tgt engine.Target, f *module.Facts) error {
+var exactIDs = []struct {
+	inf, marker, class, line string // line: format with the "VEN_xxxx&DEV_xxxx" ID
+}{
+	{"WINDOWS/INF/98RVESA.INF", `=VESA, PCI\CC_0300`, "0300", `%%VESAPCI.DeviceDesc%%=VESA, PCI\%s`}, // display-vesa
+	{"WINDOWS/INF/XHCI98.INF", `=Xhci.Dev,PCI\CC_0C0330`, "0c0330", `%%XhciDesc%%=Xhci.Dev,PCI\%s`},  // usb3-xhci98
+}
+
+// AddExactIDs names this PC's devices in the class-wide driver INFs the
+// modules installed.
+func AddExactIDs(tgt engine.Target, f *module.Facts) error {
 	if f == nil {
 		return nil
 	}
-	inf, err := tgt.ReadFile(vesaINF)
-	if err != nil {
-		return nil // module not applied
-	}
 	var known [][]byte
 	names, _ := tgt.ReadDir("WINDOWS/INF")
-	for _, n := range names {
-		if !strings.EqualFold(path.Ext(n), ".inf") || strings.EqualFold(n, path.Base(vesaINF)) {
+	for _, e := range exactIDs {
+		inf, err := tgt.ReadFile(e.inf)
+		if err != nil {
+			continue // module not applied
+		}
+		if known == nil {
+			for _, n := range names {
+				if !strings.EqualFold(path.Ext(n), ".inf") || isOurs(n) {
+					continue
+				}
+				if b, err := tgt.ReadFile("WINDOWS/INF/" + n); err == nil {
+					known = append(known, bytes.ToUpper(b))
+				}
+			}
+		}
+		var add []string
+		for _, d := range f.PCI {
+			if !strings.HasPrefix(strings.ToLower(d.Class), e.class) {
+				continue
+			}
+			v, dev, ok := strings.Cut(strings.ToUpper(d.ID), ":")
+			if !ok || len(v) != 4 || len(dev) != 4 {
+				continue
+			}
+			id := "VEN_" + v + "&DEV_" + dev
+			if bytes.Contains(bytes.ToUpper(inf), []byte(id)) || hasID(known, id) {
+				continue
+			}
+			add = append(add, fmt.Sprintf(e.line, id))
+		}
+		if len(add) == 0 {
 			continue
 		}
-		if b, err := tgt.ReadFile("WINDOWS/INF/" + n); err == nil {
-			known = append(known, bytes.ToUpper(b))
+		out, ok := insertAfter(inf, e.marker, add)
+		if !ok {
+			return fmt.Errorf("%s: no %s entry to extend", e.inf, e.marker)
+		}
+		if err := tgt.WriteFile(e.inf, out, 0o644); err != nil {
+			return err
 		}
 	}
-	var add []string
-	for _, d := range f.PCI {
-		if !strings.HasPrefix(d.Class, "0300") {
-			continue
+	return nil
+}
+
+func isOurs(name string) bool {
+	for _, e := range exactIDs {
+		if strings.EqualFold(name, path.Base(e.inf)) {
+			return true
 		}
-		v, dev, ok := strings.Cut(strings.ToUpper(d.ID), ":")
-		if !ok || len(v) != 4 || len(dev) != 4 {
-			continue
-		}
-		id := "VEN_" + v + "&DEV_" + dev
-		if bytes.Contains(inf, []byte(id)) || hasID(known, id) {
-			continue
-		}
-		add = append(add, `%VESAPCI.DeviceDesc%=VESA, PCI\`+id)
 	}
-	if len(add) == 0 {
-		return nil
-	}
-	out, ok := insertAfter(inf, `=VESA, PCI\CC_0300`, add)
-	if !ok {
-		return fmt.Errorf("%s: no PCI\\CC_0300 entry to extend", vesaINF)
-	}
-	return tgt.WriteFile(vesaINF, out, 0o644)
+	return false
 }
 
 func hasID(infs [][]byte, id string) bool {

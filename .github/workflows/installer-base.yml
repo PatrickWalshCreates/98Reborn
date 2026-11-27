@@ -111,3 +111,18 @@ jobs:
           gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
             gh release create "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --prerelease --title "98Reborn $GITHUB_REF_NAME" --notes "Installer base image. Use the 98Reborn Tool to build your installer from it."
           gh release upload "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --clobber 98reborn-base.iso 98reborn-base.iso.sha256 98reborn-tool-* 98Reborn-Tool-macOS.zip
+      - uses: actions/checkout@v7
+        with:
+          path: src
+      - name: Attach the source of GPL drivers on the image
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The base image carries GPL-licensed driver binaries (modules/*/SOURCE-URL.txt);
+          # their exact source goes with every release.
+          for f in src/modules/*/SOURCE-URL.txt; do
+            url=$(head -n1 "$f")
+            out="source-$(basename "$(dirname "$f")")-$(basename "$url")"
+            curl -fsSL -o "$out" "$url"
+            gh release upload "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --clobber "$out"
+          done

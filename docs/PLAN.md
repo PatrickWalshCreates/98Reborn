@@ -235,7 +235,7 @@ GitHub Pages (Astro or plain static) in `site/`:
 | **5. Control Center** | Win32 app v1: specs, build info, monitor, updates | Runs on stock + patched 98 SE; updates a module end to end |
 | **6. Gaming edition** | Curated game stack + DOS mode | A test list of ~30 games runs on Gold and Silver machines |
 | **7. Site & release** | GitHub Pages, HCL, signed releases, CI | v0.1 public beta |
-| **Ongoing** | Clean-room drivers: xHCI, AHCI, possibly NVMe | Each ships as a module |
+| **Ongoing** | Drivers: xHCI (shipped: xHCI98, GPL), AHCI, NVMe | Each ships as a module |
 
 ## 5. Big-risk items (attack first)
 0. **NVMe:** most new PCs have no SATA port, so this is close to non-negotiable. It's a new driver

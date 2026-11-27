@@ -1,0 +1,80 @@
+{
+  "id": "usb3-xhci98",
+  "name": "USB 3 (xHCI98)",
+  "version": "3.6.0",
+  "description": "USB 3 host controller driver for PCs whose USB ports are all xHCI (most since 2015): USB keyboards, mice and hubs work inside Windows 98 instead of relying on the firmware's legacy USB emulation. xHCI98 3.6.0.0 by Yeo Kheng Meng (GPL-2.0-or-later, https://github.com/yeokm1/xhci98); USB storage needs extra Windows 98 files that aren't included yet.",
+  "category": "drivers",
+  "license": "GPL-2.0-or-later (xHCI98: see files/LICENSE-xhci98.txt; source: https://github.com/yeokm1/xhci98/tree/v3.6.0.0)",
+  "ops": [
+    {
+      "op": "file.copy",
+      "src": "files/xhci98.sys",
+      "file": "WIN98\\XHCI98.SYS",
+      "sha256": "0e53a938f7777c81d7145c6666f0ac2b554f7ec96ae3b657fc96fe088a642b8f",
+      "comment": "The setup folder is Windows' source path, so the controller installs with no disk prompt."
+    },
+    {
+      "op": "file.copy",
+      "src": "files/xhci98.inf",
+      "file": "{{windir}}\\INF\\XHCI98.INF",
+      "sha256": "ec8715b7cfe370b43936b1de659b9939e9d6b27e042dc7d0e1a351dc94472f9d",
+      "comment": "One copy only: with a second INF in the source folder Windows offers a choice of drivers, and that brings up the wizard."
+    },
+    {
+      "op": "file.copy",
+      "src": "files/LICENSE-xhci98.txt",
+      "file": "WIN98\\XHCI98.TXT",
+      "sha256": "f40f71b0b6268c9af444bb39b2f1dfdee5ab0c981c54d39ba1f3cc5581c94fcc"
+    },
+    {
+      "op": "reg.set",
+      "path": "HKLM\\System\\CurrentControlSet\\Services\\USB",
+      "name": "XhciSilentInstall",
+      "type": "dword",
+      "data": "1",
+      "comment": "xHCI98's silent install: hubs, boot keyboards and mice, and USB sticks install with no Add New Hardware wizard (their files come from the setup folder)."
+    },
+    {
+      "op": "reg.set",
+      "path": "HKLM\\System\\CurrentControlSet\\Services\\USB\\SilentClasses",
+      "name": "0",
+      "type": "binary",
+      "data": "80,09,00,00"
+    },
+    {
+      "op": "reg.set",
+      "path": "HKLM\\System\\CurrentControlSet\\Services\\USB\\SilentClasses",
+      "name": "1",
+      "type": "binary",
+      "data": "43,03,01,01"
+    },
+    {
+      "op": "reg.set",
+      "path": "HKLM\\System\\CurrentControlSet\\Services\\USB\\SilentClasses",
+      "name": "2",
+      "type": "binary",
+      "data": "43,03,01,02"
+    },
+    {
+      "op": "reg.set",
+      "path": "HKLM\\System\\CurrentControlSet\\Services\\USB\\SilentClasses",
+      "name": "3",
+      "type": "binary",
+      "data": "c3,08,06,50"
+    },
+    {
+      "op": "reg.set",
+      "path": "HKLM\\System\\CurrentControlSet\\Services\\USB\\SilentClasses",
+      "name": "4",
+      "type": "binary",
+      "data": "83,03,01,01"
+    },
+    {
+      "op": "reg.set",
+      "path": "HKLM\\System\\CurrentControlSet\\Services\\USB\\SilentClasses",
+      "name": "5",
+      "type": "binary",
+      "data": "83,03,01,02"
+    }
+  ]
+}

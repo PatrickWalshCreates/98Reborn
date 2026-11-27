@@ -273,8 +273,8 @@ func Evaluate(s *Scan) *Report {
 	// USB: keyboard and mouse.
 	if hasXHCI && !hasEHCI {
 		add(Finding{Area: "USB", Level: "warn", Cap: Silver,
-			Reason: "USB 3 only: Windows 98 has no USB 3 driver yet. USB keyboards and mice will rely on the BIOS's legacy USB support; USB drives won't work inside Windows 98.",
-			Fix:    "Make sure 'Legacy USB support' is enabled in the BIOS, or use a PS/2 keyboard and mouse if the board has the port."})
+			Reason: "USB 3 only: 98Reborn installs the xHCI98 USB 3 driver, so USB keyboards, mice and hubs work inside Windows 98. USB drives don't work in Windows 98 yet.",
+			Fix:    "The first time Windows starts it asks once to install the USB 3 controller: press Enter through the steps (the built-in or a PS/2 keyboard works before the driver does)."})
 	}
 
 	// Memory.
