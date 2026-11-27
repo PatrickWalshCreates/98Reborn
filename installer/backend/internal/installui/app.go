@@ -707,15 +707,17 @@ func (a *App) check(u *gui.UI, r, btn gui.Rect) {
 func (a *App) diskStep(u *gui.UI, r, btn gui.Rect) {
 	c, t := u.C, a.T
 	y := a.heading(c, r, "Where should Windows 98 go?", "Your other systems and files stay where they are unless you choose to erase a disk.")
-	rowH := t.Body.H + t.Small.H*2 + 22
 	for i, o := range a.options {
+		// Long titles (disk model names) wrap instead of running off the edge.
+		titleLines := max(1, len(t.Bold.Wrap(o.Title, r.W-48)))
+		rowH := t.Body.H*titleLines + t.Small.H*2 + 22
 		if y+rowH > r.Y+r.H-110 {
 			break
 		}
 		row := gui.R(r.X, y, r.W, rowH)
 		if !o.Available {
-			c.Text(t.Body, row.X+16, row.Y+8, o.Title, t.Muted)
-			c.TextBox(t.Small, gui.R(row.X+16, row.Y+10+t.Body.H, row.W-24, 0), "Not possible: "+o.Reason+".", t.Muted, 2)
+			th := c.TextBox(t.Body, gui.R(row.X+16, row.Y+8, row.W-24, 0), o.Title, t.Muted, 0)
+			c.TextBox(t.Small, gui.R(row.X+16, row.Y+10+th, row.W-24, 0), "Not possible: "+o.Reason+".", t.Muted, 2)
 			y += rowH + 4
 			continue
 		}
@@ -732,12 +734,12 @@ func (a *App) diskStep(u *gui.UI, r, btn gui.Rect) {
 		if a.pick == i {
 			c.Disc(row.X+18, row.Y+8+t.Body.H/2, 3, t.Accent)
 		}
-		c.Text(t.Bold, row.X+36, row.Y+8, title, t.Text)
+		th := c.TextBox(t.Bold, gui.R(row.X+36, row.Y+8, row.W-48, 0), title, t.Text, 0)
 		col := t.Muted
 		if len(o.Erases) > 0 {
 			col = t.Bad
 		}
-		c.TextBox(t.Small, gui.R(row.X+36, row.Y+12+t.Body.H, row.W-48, 0), detail, col, 2)
+		c.TextBox(t.Small, gui.R(row.X+36, row.Y+12+th, row.W-48, 0), detail, col, 2)
 		y += rowH + 4
 	}
 	if a.pick >= 0 {
@@ -907,8 +909,8 @@ func (a *App) confirm(u *gui.UI, r, btn gui.Rect) {
 	y := a.heading(c, r, "Ready to install", "")
 	kv := func(k, v string) {
 		c.Text(t.Body, r.X, y, k, t.Muted)
-		c.TextBox(t.Body, gui.R(r.X+15*t.Body.W, y, r.W-15*t.Body.W, 0), v, t.Text, 2)
-		y += t.Body.H + 10
+		h := c.TextBox(t.Body, gui.R(r.X+15*t.Body.W, y, r.W-15*t.Body.W, 0), v, t.Text, 2)
+		y += max(h, t.Body.H) + 8 // long values wrap onto more lines
 	}
 	kv("Where", o.Title)
 	kv("Edition", map[string]string{"core": "Core", "gaming": "Gaming"}[a.edition])

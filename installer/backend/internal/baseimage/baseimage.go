@@ -77,6 +77,7 @@ var modulePrefixes = []string{
 	// Wi-Fi: Intel, MediaTek, Realtek, Qualcomm, plus the simulated radio for tests.
 	"drivers/net/wireless/intel/iwlwifi/", "drivers/net/wireless/mediatek/mt76/",
 	"drivers/net/wireless/realtek/rtw88/", "drivers/net/wireless/realtek/rtw89/",
+	"drivers/net/wireless/realtek/rtlwifi/", // older Realtek PCIe cards (RTL8188EE, RTL8192EE, RTL8723BE, ...)
 	"drivers/net/wireless/ath/", "drivers/net/wireless/virtual/",
 	"net/wireless/", "net/mac80211/", "net/rfkill/", "net/qrtr/", "drivers/bus/mhi/",
 	// Ciphers the Wi-Fi stack loads by name at run time (WPA2/WPA3: CCMP,
@@ -515,6 +516,7 @@ var wifiFirmwarePackages = map[string][]string{
 	"linux-firmware-mediatek": {"mediatek/WIFI_", "mediatek/mt7"},
 	"linux-firmware-rtw88":    {"rtw88/"},
 	"linux-firmware-rtw89":    {"rtw89/"},
+	"linux-firmware-rtlwifi":  {"rtlwifi/"},
 	"linux-firmware-ath10k":   {"ath10k/"},
 	"linux-firmware-ath11k":   {"ath11k/"},
 	"linux-firmware-ath12k":   {"ath12k/"},

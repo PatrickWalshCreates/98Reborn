@@ -61,7 +61,7 @@ Be upfront with users. Publish a hardware compatibility list (HCL).
 | **Unsupported** | ARM | — |
 
 **The GPU problem:** no modern NVIDIA, AMD, or Intel GPU has 9x drivers. Options:
-- VBEMP universal VESA driver (2D, high resolutions, no acceleration).
+- A universal VESA driver (2D, high resolutions, no acceleration): shipped as the `display-vesa` module (vmdisp9x, MIT).
 - SoftGPU in software-rendering mode (Mesa). **Benchmark this on a fast modern CPU.** If it runs
   late-90s and early-2000s D3D and OpenGL games acceptably, it's the headline feature of the Gaming edition.
 - Recommend a cheap period-compatible PCIe card for Gold tier.

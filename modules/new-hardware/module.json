@@ -1,0 +1,29 @@
+{
+  "id": "new-hardware",
+  "name": "Detect this PC's hardware",
+  "version": "1.0.0",
+  "description": "Windows 98 Setup runs in a virtual PC, and the devices it finds there by legacy detection (its Cirrus graphics card, printer and serial ports, monitor) would stay installed for good. On the first real start, before Windows loads, this removes them, so Windows sets up the PC's own graphics adapter (and ports, if it has any) from its Plug and Play BIOS or ACPI. Applied automatically by the installer.",
+  "category": "system",
+  "license": "MIT",
+  "ops": [
+    {
+      "op": "file.copy",
+      "src": "files/NEWHW.FLG",
+      "file": "W9XM\\NEWHW.FLG",
+      "overwrite": true
+    },
+    {
+      "op": "lines.block",
+      "file": "AUTOEXEC.BAT",
+      "block": "new-hardware",
+      "position": "start",
+      "lines": [
+        "IF EXIST C:\\W9XM\\NEWHW.FLG C:\\{{windir}}\\REGEDIT.EXE /L:C:\\{{windir}}\\SYSTEM.DAT /R:C:\\{{windir}}\\USER.DAT /D HKEY_LOCAL_MACHINE\\Enum\\Root\\*PNP0905",
+        "IF EXIST C:\\W9XM\\NEWHW.FLG C:\\{{windir}}\\REGEDIT.EXE /L:C:\\{{windir}}\\SYSTEM.DAT /R:C:\\{{windir}}\\USER.DAT /D HKEY_LOCAL_MACHINE\\Enum\\Root\\*PNP0400",
+        "IF EXIST C:\\W9XM\\NEWHW.FLG C:\\{{windir}}\\REGEDIT.EXE /L:C:\\{{windir}}\\SYSTEM.DAT /R:C:\\{{windir}}\\USER.DAT /D HKEY_LOCAL_MACHINE\\Enum\\Root\\*PNP0500",
+        "IF EXIST C:\\W9XM\\NEWHW.FLG C:\\{{windir}}\\REGEDIT.EXE /L:C:\\{{windir}}\\SYSTEM.DAT /R:C:\\{{windir}}\\USER.DAT /D HKEY_LOCAL_MACHINE\\Enum\\MONITOR",
+        "IF EXIST C:\\W9XM\\NEWHW.FLG DEL C:\\W9XM\\NEWHW.FLG"
+      ]
+    }
+  ]
+}

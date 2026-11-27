@@ -1,0 +1,84 @@
+{
+  "id": "display-vesa",
+  "name": "VESA display driver",
+  "version": "1.0.0",
+  "description": "High-resolution, true-colour desktop on graphics adapters with no Windows 98 driver (most modern GPUs), through the video BIOS's VESA BIOS Extensions. Uses the VESA driver from vmdisp9x by JHRobotics (MIT). Windows picks it when it finds the PC's graphics adapter; adapters with their own Windows 98 driver keep using that.",
+  "category": "drivers",
+  "license": "MIT (vmdisp9x: see files/LICENSE-vmdisp9x.txt)",
+  "ops": [
+    {
+      "op": "file.copy",
+      "src": "files/vesamini.drv",
+      "file": "WIN98\\VESAMINI.DRV",
+      "sha256": "2e661f2c17b5e7d6bcaa2c93cf3f79d38e70ab901850d7e5e3d26658aa697ddc",
+      "comment": "The setup folder is Windows' source path: new hardware finds its files here."
+    },
+    {
+      "op": "file.copy",
+      "src": "files/vesamini.vxd",
+      "file": "WIN98\\VESAMINI.VXD",
+      "sha256": "3a8fec2ad24e2c9b6c0a44e3d616a227d6b974d407d4ee16d33d88c3ca9d803a"
+    },
+    {
+      "op": "file.copy",
+      "src": "files/vmdisp9x.dll",
+      "file": "WIN98\\VMDISP9X.DLL",
+      "sha256": "227d849b42815bd6b2f644ebfda54df1b43dfdd86a56aeda7dc7d1cbe3b07123"
+    },
+    {
+      "op": "file.copy",
+      "src": "files/vmhal9x.dll",
+      "file": "WIN98\\VMHAL9X.DLL",
+      "sha256": "974c5e17aa63ea6ee43c3ecfee68bef1518d62294b4ece67718988bb916d190b"
+    },
+    {
+      "op": "file.copy",
+      "src": "files/vmhal486.dll",
+      "file": "WIN98\\VMHAL486.DLL",
+      "sha256": "e2d35b6646a895638947a06fdfb0ad6fe5ca7d5fc0a5331d44fda65201d9e132"
+    },
+    {
+      "op": "file.copy",
+      "src": "files/98RVESA.INF",
+      "file": "{{windir}}\\INF\\98RVESA.INF",
+      "sha256": "cda64a1c9c5a6782ffd570237de9a15b077367b5a33e5571ed26d1566c833c86"
+    },
+    {
+      "op": "file.copy",
+      "src": "files/LICENSE-vmdisp9x.txt",
+      "file": "WIN98\\VMDISP9X.TXT",
+      "sha256": "41e6fab05ff91d39589428630494817c9258af48d17b021378436a8cbd75b180"
+    },
+    {
+      "op": "lines.edit",
+      "file": "{{windir}}\\INF\\MSDISP.INF",
+      "match": "^%PCI\\\\CC_0300\\.DeviceDesc%=",
+      "action": "delete",
+      "comment": "Otherwise 'Standard PCI Graphics Adapter (VGA)', 640x480 in 16 colours, competes for the same adapters."
+    },
+    {
+      "op": "file.delete",
+      "file": "{{windir}}\\INF\\DRVIDX.BIN",
+      "comment": "Windows rebuilds its driver index, now including 98RVESA.INF."
+    },
+    {
+      "op": "file.delete",
+      "file": "{{windir}}\\INF\\DRVDATA.BIN"
+    },
+    {
+      "op": "reg.set",
+      "path": "HKLM\\Config\\0001\\Display\\Settings",
+      "name": "Resolution",
+      "type": "sz",
+      "data": "1024,768",
+      "comment": "The first mode the VESA driver starts in; Windows keeps the previous adapter's mode otherwise."
+    },
+    {
+      "op": "reg.set",
+      "path": "HKLM\\Config\\0001\\Display\\Settings",
+      "name": "BitsPerPixel",
+      "type": "sz",
+      "data": "32"
+    }
+  ]
+}

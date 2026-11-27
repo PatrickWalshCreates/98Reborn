@@ -241,13 +241,15 @@ func withFAT(img string, fn func(*fat.FS) error) error {
 	return fh.Sync()
 }
 
-// patch applies the edition plus the installer's own cleanup module.
+// patch applies the edition plus the installer's own modules: cleanup, fresh
+// hardware detection on the first real start (Setup ran in a virtual PC) and
+// the VESA display driver for graphics adapters without a Windows 98 driver.
 func patch(o Options, img string) error {
 	all, err := module.LoadDir(o.ModulesDir)
 	if err != nil {
 		return err
 	}
-	wanted := []string{"installer-cleanup"}
+	wanted := []string{"installer-cleanup", "new-hardware", "display-vesa"}
 	var params map[string]map[string]string
 	if o.Edition != "" {
 		ed, err := module.LoadEdition(filepath.Join(o.EditionsDir, o.Edition))
@@ -272,6 +274,8 @@ func patch(o Options, img string) error {
 	if err != nil {
 		return err
 	}
-	_, err = plan.Apply()
-	return err
+	if _, err = plan.Apply(); err != nil {
+		return err
+	}
+	return AddDisplayIDs(tgt, o.Facts)
 }

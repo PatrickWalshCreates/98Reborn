@@ -22,7 +22,7 @@ import (
 
 const GiB = int64(1<<30) / 512
 
-type mock struct{ uefi bool }
+type mock struct{ uefi, noWifi bool }
 
 func (m mock) Prepare(status func(string)) (*installui.Medium, error) {
 	status("Hardware drivers loaded")
@@ -30,7 +30,10 @@ func (m mock) Prepare(status func(string)) (*installui.Medium, error) {
 	status("Windows 98 SE setup files: 77 cabinets")
 	return &installui.Medium{Device: "sdb1", Version: "0.1.0-dev", HasSetup: true, Cabs: 77}, nil
 }
-func (mock) Connect() installui.NetState {
+func (m mock) Connect() installui.NetState {
+	if m.noWifi {
+		return installui.NetState{Wired: []string{"eth0"}}
+	}
 	return installui.NetState{Wired: []string{"eth0"}, Wireless: []string{"wlan0"}}
 }
 func (mock) InternetCheck() error {
@@ -58,7 +61,7 @@ func (mock) Disks() []*disk.Disk {
 	win := &disk.Part{Num: 1, Start: 2048, Sectors: 100 * GiB, FS: "ntfs", OS: "Windows 10/11", Active: true, MinBytes: 45 << 30}
 	return []*disk.Disk{
 		{Name: "sda", Bus: "sata", Model: "WDC WD5000AAKX", Size: 500 * GiB * 512, LogicalSec: 512, Table: disk.TableMBR, Parts: []*disk.Part{win}},
-		{Name: "sdc", Bus: "sata", Model: "Samsung SSD 850", Size: 120 * GiB * 512, LogicalSec: 512, Table: disk.TableNone},
+		{Name: "sdc", Bus: "sata", Model: "Micron_1100_MTFDDAV256TBN", Size: 120 * GiB * 512, LogicalSec: 512, Table: disk.TableNone},
 		{Name: "nvme0n1", Bus: "nvme", Model: "Samsung 970 EVO", Size: 1000 * GiB * 512, LogicalSec: 512, Table: disk.TableGPT},
 	}
 }
@@ -129,6 +132,15 @@ func main() {
 		a.Frame(u, []gui.Event{{Key: gui.KeyEnter}})
 		time.Sleep(80 * time.Millisecond)
 		shot("2c-wifi-no-internet")
+		// The rest of the flow on a PC without Wi-Fi, where the network
+		// screen has just "Try again" and "Continue without internet".
+		a = installui.New(mock{uefi: true, noWifi: true}, t)
+		a.Start()
+		time.Sleep(50 * time.Millisecond)
+		a.Frame(u, nil)
+		a.Frame(u, []gui.Event{enter})
+		time.Sleep(80 * time.Millisecond)
+		a.Frame(u, nil)
 		shot("3-check", gui.Event{Key: gui.KeyTab}, gui.Event{Key: gui.KeyTab}, enter) // "Continue without internet"
 		shot("4-disk", enter)
 		shot("5-details", enter)

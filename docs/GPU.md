@@ -11,6 +11,13 @@ exposed through [98Reborn Boot](BOOT.md) on UEFI PCs.
 - Widescreen and native panel resolutions, 32-bit color.
 - Builds on existing VBE display-driver work for 98. This is what the Silver grade promises today.
 
+**Status (alpha.7):** the installer ships the VESA driver from
+[vmdisp9x](https://github.com/JHRobotics/vmdisp9x) (MIT) as the `display-vesa` module. Windows picks it for
+any graphics adapter with no Windows 98 driver of its own: the installer writes the adapter's exact PCI ID
+into `98RVESA.INF`, so Windows installs it silently, and the desktop starts at 1024x768 in 32-bit colour.
+Verified in QEMU (standard VGA). Still to do: native panel resolutions (the driver's mode list is fixed;
+`vesamode.exe` can enumerate the video BIOS's modes) and the GOP framebuffer path on UEFI PCs.
+
 ## Track 2: fast software 3D on any GPU
 
 One core of a 2024 CPU is roughly 50–100× a 1999 Pentium II. That's enough to render most late-90s
