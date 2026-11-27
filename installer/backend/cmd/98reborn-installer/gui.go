@@ -161,6 +161,10 @@ func (s *linuxSystem) VMScreen() image.Image {
 	return img
 }
 
+func (s *linuxSystem) CollectLogs(progress func(string)) (string, error) {
+	return collectLogs(s.med, s.report, progress)
+}
+
 func (s *linuxSystem) UEFI() bool {
 	_, err := os.Stat("/sys/firmware/efi")
 	return err == nil

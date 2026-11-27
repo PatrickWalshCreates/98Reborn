@@ -21,12 +21,13 @@ func (fake) Check() *compat.Report                   { return compat.Evaluate(&c
 func (fake) Disks() []*disk.Disk {
 	return []*disk.Disk{{Name: "sda", Bus: "sata", Size: 100 << 30, LogicalSec: 512, Table: disk.TableNone}}
 }
-func (fake) Install(Request, func(string)) error { return nil }
-func (fake) VMScreen() image.Image               { return nil }
-func (fake) UEFI() bool                          { return false }
-func (fake) Reboot()                             {}
-func (fake) PowerOff()                           {}
-func (fake) Shell()                              {}
+func (fake) Install(Request, func(string)) error      { return nil }
+func (fake) VMScreen() image.Image                    { return nil }
+func (fake) CollectLogs(func(string)) (string, error) { return "", nil }
+func (fake) UEFI() bool                               { return false }
+func (fake) Reboot()                                  {}
+func (fake) PowerOff()                                {}
+func (fake) Shell()                                   {}
 
 // Walks the wizard with the keyboard alone: Enter on each step.
 func TestKeyboardWalk(t *testing.T) {

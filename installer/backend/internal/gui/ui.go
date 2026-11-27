@@ -50,6 +50,9 @@ type UI struct {
 	keys           []int
 	enterUsed      bool
 	focusNext      bool
+	// A button had keyboard focus in this frame / the last one: Enter then
+	// belongs to it, not to a screen's default action.
+	btnFocused, prevBtnFocused bool
 }
 
 func NewUI(c *Canvas, t *Theme) *UI { return &UI{C: c, T: t, MouseX: -1, MouseY: -1} }
@@ -57,6 +60,7 @@ func NewUI(c *Canvas, t *Theme) *UI { return &UI{C: c, T: t, MouseX: -1, MouseY:
 // Begin starts a frame with the events since the last one.
 func (u *UI) Begin(ev []Event) {
 	u.prevN, u.nfocus = u.nfocus, 0
+	u.prevBtnFocused, u.btnFocused = u.btnFocused, false
 	u.click, u.typed, u.keys, u.enterUsed = false, nil, nil, false
 	for _, e := range ev {
 		switch {
@@ -124,6 +128,10 @@ func (u *UI) Key(k int) bool {
 // -1 focuses nothing, so Enter reaches the step's default (Next) button.
 func (u *UI) Focus(n int) { u.focus = n }
 
+// ButtonFocused reports whether a button had keyboard focus in the last
+// frame, so Enter is that button's and not a default action's.
+func (u *UI) ButtonFocused() bool { return u.prevBtnFocused }
+
 func (u *UI) take() (idx int, focused bool) {
 	idx = u.nfocus
 	u.nfocus++
@@ -157,6 +165,7 @@ func (u *UI) Button(r Rect, label string, primary, enabled bool) bool {
 	u.C.Bevel(r, Mix(bg, 0xffffff, 140), Mix(bg, 0x000000, 90), false)
 	if focused && enabled {
 		u.C.Frame(r.Inset(3), Mix(fg, bg, 90))
+		u.btnFocused = true
 	}
 	u.C.Text(t.Bold, r.X+(r.W-t.Bold.Width(label))/2, r.Y+(r.H-t.Bold.H)/2, label, fg)
 	if !enabled {

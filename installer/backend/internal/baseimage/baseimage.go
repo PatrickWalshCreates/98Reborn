@@ -421,7 +421,7 @@ func espImage(files map[string][]byte, now time.Time) ([]byte, error) {
 	for _, b := range files {
 		total += int64(len(b))
 	}
-	size := total + total/16 + 4<<20
+	size := total + total/16 + 20<<20 // 16 MiB of it for logs the installer saves there
 	if size < 40<<20 {
 		size = 40 << 20
 	}

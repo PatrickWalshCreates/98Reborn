@@ -67,6 +67,9 @@ type System interface {
 	Disks() []*disk.Disk
 	Install(r Request, stage func(string)) error
 	VMScreen() image.Image // Windows Setup's screen while it runs (nil if none yet)
+	// CollectLogs saves an installed Windows 98's logs and this PC's details
+	// to a USB drive and says where; err explains a partial or failed save.
+	CollectLogs(progress func(string)) (where string, err error)
 	UEFI() bool
 	Reboot()
 	PowerOff()
@@ -101,6 +104,12 @@ type App struct {
 	status  []string // welcome screen progress
 	medium  *Medium
 	prepErr error
+
+	logsBusy   bool
+	logsStatus string
+	logsWhere  string
+	logsErr    error
+	logsDone   bool
 
 	netBusy bool
 	net     *NetState
@@ -192,6 +201,21 @@ func (a *App) startConnect() {
 		n := a.Sys.Connect()
 		a.mu.Lock()
 		a.net, a.netBusy = &n, false
+		a.mu.Unlock()
+	}()
+}
+
+func (a *App) startLogs() {
+	a.logsBusy, a.logsDone, a.logsErr, a.logsWhere = true, false, nil, ""
+	a.logsStatus = "Saving logs"
+	go func() {
+		where, err := a.Sys.CollectLogs(func(s string) {
+			a.mu.Lock()
+			a.logsStatus = s
+			a.mu.Unlock()
+		})
+		a.mu.Lock()
+		a.logsWhere, a.logsErr, a.logsBusy, a.logsDone = where, err, false, true
 		a.mu.Unlock()
 	}()
 }
@@ -360,7 +384,7 @@ func (a *App) nav(u *gui.UI, r gui.Rect, back bool, next string, nextOK bool) (g
 	if next != "" {
 		goNext = u.Button(nr, next, true, nextOK)
 	}
-	if !goNext && nextOK && next != "" && u.Key(gui.KeyEnter) {
+	if !goNext && nextOK && next != "" && !u.ButtonFocused() && u.Key(gui.KeyEnter) {
 		goNext = true
 	}
 	return
@@ -383,12 +407,41 @@ func (a *App) welcome(u *gui.UI, r, btn gui.Rect) {
 	y += 8
 	switch {
 	case a.prepErr != nil:
-		a.note(c, gui.R(r.X, y, r.W, 0), a.prepErr.Error(), t.Bad, t.BadSoft)
+		y += a.note(c, gui.R(r.X, y, r.W, 0), a.prepErr.Error(), t.Bad, t.BadSoft) + 8
 	case a.medium != nil && !a.medium.HasSetup:
-		a.note(c, gui.R(r.X, y, r.W, 0), "This USB stick has no Windows 98 SE setup files, so it can only check PCs. Build it again with the 98Reborn Tool and your CD.", t.Warn, t.WarnSoft)
+		y += a.note(c, gui.R(r.X, y, r.W, 0), "This USB stick has no Windows 98 SE setup files, so it can only check PCs. Build it again with the 98Reborn Tool and your CD.", t.Warn, t.WarnSoft) + 8
 	}
 	ready := a.medium != nil && a.prepErr == nil
-	if _, next := a.nav(u, btn, false, "Next >", ready); next {
+	// Next first, so it keeps the default focus and Enter.
+	_, next := a.nav(u, btn, false, "Next >", ready)
+	if ready {
+		y += 6
+		switch {
+		case a.logsBusy:
+			a.spinner(c, r.X-2, y, t.Body.H)
+			c.Text(t.Body, r.X+t.Body.H+10, y, a.logsStatus+"…", t.Text)
+		case a.logsDone && a.logsWhere == "":
+			why := "nothing was saved"
+			if a.logsErr != nil {
+				why = a.logsErr.Error()
+			}
+			a.note(c, gui.R(r.X, y, r.W, 0), "Couldn't save the logs: "+why, t.Bad, t.BadSoft)
+		case a.logsDone:
+			msg := "Logs saved to " + a.logsWhere + "."
+			if a.logsErr != nil {
+				msg += " Note: " + a.logsErr.Error() + "."
+			}
+			a.note(c, gui.R(r.X, y, r.W, 0), msg+" Attach that folder to a bug report.", t.Ok, t.OkSoft)
+		}
+		// Secondary action, left of Next: for a Windows 98 that's already
+		// installed and misbehaving.
+		label := "Save Windows 98 logs"
+		bw := t.Bold.Width(label) + 48
+		if u.Button(gui.R(btn.X, btn.Y, bw, btn.H), label, false, !a.logsBusy) {
+			a.startLogs()
+		}
+	}
+	if next {
 		a.step = stNetwork
 		a.startConnect()
 		u.Focus(-1)

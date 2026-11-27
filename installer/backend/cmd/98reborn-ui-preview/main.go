@@ -85,6 +85,10 @@ func (mock) VMScreen() image.Image {
 	}
 	return img
 }
+func (mock) CollectLogs(progress func(string)) (string, error) {
+	progress("Copying logs from nvme0n1p1")
+	return `the USB drive sdc1, folder 98REBORN-LOGS\2026-11-27_191500`, nil
+}
 func (m mock) UEFI() bool { return m.uefi }
 func (mock) Reboot()      {}
 func (mock) PowerOff()    {}
