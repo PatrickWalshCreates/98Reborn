@@ -29,8 +29,14 @@ jobs:
           cache-dependency-path: installer/backend/go.mod
       - name: Test
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq ntfs-3g e2fsprogs qemu-system-x86 clang lld >/dev/null
-          go vet ./... && go test -short ./...
+          # The runner's preinstalled third-party apt sources (Microsoft's) can
+          # break apt-get update; we only need Ubuntu's own archive.
+          sudo rm -f /etc/apt/sources.list.d/microsoft*
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ntfs-3g e2fsprogs qemu-system-x86 clang lld >/dev/null
+          command -v qemu-system-x86_64
+          go vet ./...
+          go test -short ./...
       - name: Build 98Reborn Boot (UEFI)
         run: sh ../boot/build.sh
       - name: Build the installer and the image builder
