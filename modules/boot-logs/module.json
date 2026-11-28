@@ -1,0 +1,62 @@
+{
+  "id": "boot-logs",
+  "name": "Log the first starts",
+  "version": "1.1.3",
+  "description": "For Windows 98's first five starts the startup menu shows for 3 seconds with 'Logged (\\BOOTLOG.TXT)' as its default (Safe mode is a keypress away), and each start's log is kept in \\98REBORN\\LOGS as BOOT1.TXT to BOOT5.TXT, beside Setup's SETUPLOG.TXT and DETLOG.TXT and the installer's INSTALL.TXT. A start that froze is kept too: its log is saved on the next start. Then the normal startup settings come back. Applied automatically by the installer.",
+  "category": "system",
+  "license": "MIT",
+  "ops": [
+    {
+      "op": "file.snapshot",
+      "file": "MSDOS.SYS",
+      "dest": "98REBORN\\MSDOS.NRM",
+      "comment": "The startup settings to restore after five logged starts (the edition's own, e.g. the gaming startup menu)."
+    },
+    {
+      "op": "ini.set",
+      "file": "MSDOS.SYS",
+      "section": "Options",
+      "key": "BootMenu",
+      "value": "1"
+    },
+    {
+      "op": "ini.set",
+      "file": "MSDOS.SYS",
+      "section": "Options",
+      "key": "BootMenuDefault",
+      "value": "2"
+    },
+    {
+      "op": "ini.set",
+      "file": "MSDOS.SYS",
+      "section": "Options",
+      "key": "BootMenuDelay",
+      "value": "3"
+    },
+    {
+      "op": "lines.block",
+      "file": "AUTOEXEC.BAT",
+      "block": "boot-logs",
+      "position": "end",
+      "lines": [
+        "IF NOT EXIST C:\\98REBORN\\LOGS\\NUL MD C:\\98REBORN",
+        "IF NOT EXIST C:\\98REBORN\\LOGS\\NUL MD C:\\98REBORN\\LOGS",
+        "FOR %%F IN (BOOTLOG.PRV SETUPLOG.TXT DETLOG.TXT) DO IF EXIST C:\\%%F C:\\{{windir}}\\COMMAND\\ATTRIB.EXE -R -S -H C:\\%%F",
+        "IF EXIST C:\\SETUPLOG.TXT IF NOT EXIST C:\\98REBORN\\LOGS\\SETUPLOG.TXT COPY C:\\SETUPLOG.TXT C:\\98REBORN\\LOGS >NUL",
+        "IF EXIST C:\\DETLOG.TXT IF NOT EXIST C:\\98REBORN\\LOGS\\DETLOG.TXT COPY C:\\DETLOG.TXT C:\\98REBORN\\LOGS >NUL",
+        "IF EXIST C:\\98REBORN\\LOGS\\LOGGED.FLG IF EXIST C:\\98REBORN\\LOGS\\BOOT4.TXT IF NOT EXIST C:\\98REBORN\\LOGS\\BOOT5.TXT COPY C:\\BOOTLOG.PRV C:\\98REBORN\\LOGS\\BOOT5.TXT >NUL",
+        "IF EXIST C:\\98REBORN\\LOGS\\LOGGED.FLG IF EXIST C:\\98REBORN\\LOGS\\BOOT3.TXT IF NOT EXIST C:\\98REBORN\\LOGS\\BOOT4.TXT COPY C:\\BOOTLOG.PRV C:\\98REBORN\\LOGS\\BOOT4.TXT >NUL",
+        "IF EXIST C:\\98REBORN\\LOGS\\LOGGED.FLG IF EXIST C:\\98REBORN\\LOGS\\BOOT2.TXT IF NOT EXIST C:\\98REBORN\\LOGS\\BOOT3.TXT COPY C:\\BOOTLOG.PRV C:\\98REBORN\\LOGS\\BOOT3.TXT >NUL",
+        "IF EXIST C:\\98REBORN\\LOGS\\LOGGED.FLG IF EXIST C:\\98REBORN\\LOGS\\BOOT1.TXT IF NOT EXIST C:\\98REBORN\\LOGS\\BOOT2.TXT COPY C:\\BOOTLOG.PRV C:\\98REBORN\\LOGS\\BOOT2.TXT >NUL",
+        "IF EXIST C:\\98REBORN\\LOGS\\LOGGED.FLG IF NOT EXIST C:\\98REBORN\\LOGS\\BOOT1.TXT COPY C:\\BOOTLOG.PRV C:\\98REBORN\\LOGS\\BOOT1.TXT >NUL",
+        "IF EXIST C:\\98REBORN\\LOGS\\LOGGED.FLG DEL C:\\98REBORN\\LOGS\\LOGGED.FLG",
+        "IF EXIST C:\\98REBORN\\LOGS\\BOOT5.TXT IF EXIST C:\\98REBORN\\MSDOS.NRM C:\\{{windir}}\\COMMAND\\ATTRIB.EXE -R -S -H C:\\MSDOS.SYS",
+        "IF EXIST C:\\98REBORN\\LOGS\\BOOT5.TXT IF EXIST C:\\98REBORN\\MSDOS.NRM COPY C:\\98REBORN\\MSDOS.NRM C:\\MSDOS.SYS >NUL",
+        "IF EXIST C:\\98REBORN\\LOGS\\BOOT5.TXT IF EXIST C:\\98REBORN\\MSDOS.NRM C:\\{{windir}}\\COMMAND\\ATTRIB.EXE +R +S +H C:\\MSDOS.SYS",
+        "IF EXIST C:\\98REBORN\\LOGS\\BOOT5.TXT IF EXIST C:\\98REBORN\\MSDOS.NRM DEL C:\\98REBORN\\MSDOS.NRM",
+        "IF EXIST C:\\98REBORN\\MSDOS.NRM COPY C:\\98REBORN\\MSDOS.NRM C:\\98REBORN\\LOGS\\LOGGED.FLG >NUL"
+      ],
+      "comment": "Windows marks its logs hidden and system, which COPY skips, so they're unhidden first. A logged start renames the last start's BOOTLOG.TXT to BOOTLOG.PRV before this runs, so that's the one kept. The flag is made with COPY: DOS opens an IF line's redirection even when the IF is false."
+    }
+  ]
+}

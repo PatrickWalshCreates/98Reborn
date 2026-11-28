@@ -223,6 +223,19 @@ func (x *opCtx) run(op module.Op) error {
 		x.note("%s: patched %d place(s)", op.File, len(hits))
 		return x.ov.Write(op.File, out)
 
+	case "file.snapshot":
+		if _, exists, err := x.ov.Read(op.Dest); err != nil || exists {
+			return err // keep the first snapshot
+		}
+		cur, exists, err := x.ov.Read(op.File)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return x.precondition(op, "%s not found", op.File)
+		}
+		return x.ov.Write(op.Dest, cur)
+
 	case "vxd.extract":
 		if _, exists, err := x.ov.Read(op.Dest); err != nil {
 			return err

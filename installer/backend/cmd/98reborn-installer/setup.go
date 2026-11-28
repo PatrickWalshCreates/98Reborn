@@ -227,7 +227,7 @@ func installFlow(med *medium, rep *compat.Report, auto bool) {
 		Key:    key, Answers: ans, AcceptEULA: true,
 		Edition: edition, ModulesDir: findCI(med.Mount, "98reborn/modules"), EditionsDir: findCI(med.Mount, "98reborn/editions"),
 		BootDir: findCI(med.Mount, "98reborn/boot"), RegisterBoot: rep.Scan.Firmware == "uefi", ACPI: rep.Scan.Firmware == "uefi",
-		Facts: rep.Scan.Facts(), WorkDir: work, Log: logf,
+		Facts: rep.Scan.Facts(), WorkDir: work, Log: logf, About: pcInfo(med, rep),
 		Stage: func(s string) {
 			step(stageNames[s])
 			marker("INSTALL " + s)
@@ -241,6 +241,9 @@ func installFlow(med *medium, rep *compat.Report, auto bool) {
 		return
 	}
 	ok(fmt.Sprintf("Windows 98 is installed (%s).", time.Since(start).Round(time.Minute)))
+	if where, err := collectLogs(med, rep, func(string) {}); err == nil {
+		info("The install's logs are also on " + where + ".")
+	}
 	if js, err := json.MarshalIndent(map[string]any{"disk": choice.Disk.Name, "start": choice.Start, "sectors": choice.Sectors, "edition": edition}, "", "  "); err == nil {
 		os.WriteFile("/run/98reborn-installed.json", js, 0o644)
 	}

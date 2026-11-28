@@ -183,6 +183,21 @@ well over 100 MB):
 - **Previews:** `go run ./cmd/98reborn-ui-preview --out DIR` renders every screen with sample data to
   PNG, on any OS.
 
+## Logs
+
+Every install leaves a record, so problems can be diagnosed without photos:
+
+- **On the new system**, `C:\98REBORN\LOGS`:
+  - `INSTALL.TXT`: the grade, hardware list, disk plan and every install step.
+  - `SETUPLOG.TXT` and `DETLOG.TXT`: Windows Setup's own logs.
+  - `BOOT1.TXT` to `BOOT5.TXT`: Windows 98's log of each of its first five starts. The `boot-logs` module makes the
+    startup menu default to "Logged" for those starts, keeps each `BOOTLOG.PRV` on the next start (so a start that
+    froze is kept too), then restores the normal startup settings.
+- **On the USB stick**: the image ends with a small FAT32 partition, **98RLOGS**, that macOS, Windows and Linux all
+  open. After an install, the installer copies its logs there. "Save Windows 98 logs" on the installer's first
+  screen saves them again at any time, together with the Windows 98 logs, registry, the PC's hardware list, `dmesg`
+  and the firmware's ACPI tables, into `98REBORN-LOGS\<date>`. Another FAT32/exFAT USB drive works too.
+
 ## Why a local web UI
 
 The Tool must look the same on Windows, macOS and Linux and ship as a single file. A small local web server

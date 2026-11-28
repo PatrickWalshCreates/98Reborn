@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 )
@@ -216,4 +217,30 @@ func Format32(dev Device, base, size int64, label string) error {
 		}
 	}
 	return nil
+}
+
+// memVolume is an in-memory device for building small volume images.
+type memVolume struct{ b []byte }
+
+func (m *memVolume) ReadAt(p []byte, off int64) (int, error) {
+	if off >= int64(len(m.b)) {
+		return 0, io.EOF
+	}
+	return copy(p, m.b[off:]), nil
+}
+
+func (m *memVolume) WriteAt(p []byte, off int64) (int, error) {
+	if off+int64(len(p)) > int64(len(m.b)) {
+		return 0, errors.New("fat: write past the end of the volume image")
+	}
+	return copy(m.b[off:], p), nil
+}
+
+// EmptyImage returns a freshly formatted, empty FAT32 volume of size bytes.
+func EmptyImage(size int64, label string) ([]byte, error) {
+	m := &memVolume{b: make([]byte, size)}
+	if err := Format32(m, 0, size, label); err != nil {
+		return nil, err
+	}
+	return m.b, nil
 }

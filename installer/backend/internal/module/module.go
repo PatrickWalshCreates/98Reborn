@@ -81,6 +81,8 @@ type Op struct {
 
 	// vxd.extract: copy driver Name out of the VMM32.VXD container File to
 	// Dest, where Windows loads it in place of the packed copy.
+	// file.snapshot: copy File, as the modules before this op left it, to
+	// Dest (kept if Dest already exists), e.g. to restore it later.
 	Dest string `json:"dest,omitempty"`
 
 	// ini.*
@@ -114,7 +116,7 @@ var (
 )
 
 var OpTypes = []string{
-	"file.copy", "file.delete", "file.delta", "file.bytes", "file.pattern", "vxd.extract",
+	"file.copy", "file.delete", "file.delta", "file.bytes", "file.pattern", "vxd.extract", "file.snapshot",
 	"ini.set", "ini.add", "ini.delete",
 	"lines.block", "lines.remove_block", "lines.edit",
 	"reg.set", "reg.delete",
@@ -366,6 +368,11 @@ func (m *Module) validateOp(op Op) error {
 		r, err2 := ParsePattern(op.Replace)
 		if err1 != nil || err2 != nil || len(f) == 0 || len(f) != len(r) {
 			return fmt.Errorf("find/replace must be equal-length hex patterns (?? = any byte)")
+		}
+		return nil
+	case "file.snapshot":
+		if op.File == "" || op.Dest == "" {
+			return fmt.Errorf("file and dest are required")
 		}
 		return nil
 	case "vxd.extract":

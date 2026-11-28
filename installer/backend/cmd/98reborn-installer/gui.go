@@ -126,7 +126,7 @@ func (s *linuxSystem) Install(r installui.Request, stage func(string)) error {
 		Edition: r.Edition, ModulesDir: findCI(s.med.Mount, "98reborn/modules"), EditionsDir: findCI(s.med.Mount, "98reborn/editions"),
 		BootDir: findCI(s.med.Mount, "98reborn/boot"), RegisterBoot: r.RegisterBoot,
 		ACPI:  s.UEFI(), // UEFI PCs start Windows 98 through ReBIOS, which gives it ACPI
-		Facts: facts, WorkDir: workDir, Log: logf,
+		Facts: facts, WorkDir: workDir, Log: logf, About: pcInfo(s.med, s.report),
 		Stage: func(st string) { marker("INSTALL " + st); stage(st) },
 	})
 	if err != nil {
@@ -134,6 +134,10 @@ func (s *linuxSystem) Install(r installui.Request, stage func(string)) error {
 		return err
 	}
 	marker("INSTALL done")
+	// A copy of the install's logs on the stick, readable on any computer.
+	if where, err := collectLogs(s.med, s.report, func(string) {}); err == nil {
+		marker("LOGS saved to " + where)
+	}
 	return nil
 }
 

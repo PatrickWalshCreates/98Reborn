@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/win9x-modern/w9xm/internal/compat"
+	"github.com/win9x-modern/w9xm/internal/compose"
 	"github.com/win9x-modern/w9xm/internal/disk"
 	"github.com/win9x-modern/w9xm/internal/scan"
 )
@@ -88,7 +89,9 @@ func collectLogs(med *medium, rep *compat.Report, progress func(string)) (string
 	return where, nil
 }
 
-// mountLogTarget mounts a writable FAT/exFAT partition on a USB drive.
+// mountLogTarget mounts a writable FAT/exFAT partition on a USB drive: the
+// 98Reborn stick's own 98RLOGS partition first, then another USB drive,
+// then the stick's EFI partition (which macOS doesn't open).
 func mountLogTarget(mediumDev string) (dir, what string, err error) {
 	mediumDisk := parentDisk(mediumDev)
 	dir = "/run/98reborn-logs"
@@ -106,33 +109,53 @@ func mountLogTarget(mediumDev string) (dir, what string, err error) {
 		}
 		return false
 	}
-	var own []string
+	var logsPart, others, efi []string
 	for _, n := range blockDevices() {
 		if _, err := os.Stat("/sys/class/block/" + n + "/partition"); err != nil {
 			continue // whole disks: their partitions are listed too
 		}
 		parent := parentDisk(n)
 		link, _ := filepath.EvalSymlinks("/sys/class/block/" + parent)
-		if !strings.Contains(link, "/usb") && parent != mediumDisk {
-			continue // internal disks are never written
+		switch {
+		case n == mediumDev: // the read-only installer partition
+		case parent == mediumDisk && fatLabel("/dev/"+n) == compose.LogsLabel:
+			logsPart = append(logsPart, n)
+		case parent == mediumDisk:
+			efi = append(efi, n)
+		case strings.Contains(link, "/usb"):
+			others = append(others, n)
+		} // internal disks are never written
+	}
+	for _, n := range logsPart {
+		if try(n) {
+			return dir, "the 98Reborn USB stick (its " + compose.LogsLabel + " drive)", nil
 		}
-		if n == mediumDev {
-			continue // the read-only installer partition
-		}
-		if parent == mediumDisk {
-			own = append(own, n)
-			continue
-		}
+	}
+	for _, n := range others {
 		if try(n) {
 			return dir, "the USB drive " + n, nil
 		}
 	}
-	for _, n := range own { // the stick's EFI partition (FAT)
+	for _, n := range efi {
 		if try(n) {
-			return dir, "the 98Reborn USB stick (its small FAT partition, " + n + ")", nil
+			return dir, "the 98Reborn USB stick (its small FAT partition " + n + ", readable on Windows and Linux)", nil
 		}
 	}
 	return "", "", errors.New("found no USB drive to save to. Plug in a USB drive formatted FAT32 or exFAT and try again")
+}
+
+// fatLabel reads a FAT32 volume's label from its boot sector ("" if none).
+func fatLabel(dev string) string {
+	f, err := os.Open(dev)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+	b := make([]byte, 512)
+	if _, err := f.ReadAt(b, 0); err != nil || b[510] != 0x55 || b[511] != 0xAA || string(b[82:87]) != "FAT32" {
+		return ""
+	}
+	return strings.TrimSpace(string(b[71:82]))
 }
 
 // parentDisk is the disk a partition belongs to ("sdb2" -> "sdb").
@@ -171,7 +194,7 @@ func copyWin98Logs(dev, out string) (int, error) {
 		}
 	}
 	// xHCI98's and 98Reborn's own folders, whole (small text files).
-	for _, d := range []string{"W9XM", "XHCI98"} {
+	for _, d := range []string{"98REBORN/LOGS", "W9XM", "XHCI98"} {
 		if src := findCI(mnt, d); src != "" {
 			filepath.Walk(src, func(p string, fi os.FileInfo, err error) error {
 				if err != nil || fi.IsDir() || fi.Size() > 4<<20 {
@@ -207,6 +230,25 @@ func copyWin98Logs(dev, out string) (int, error) {
 }
 
 func writePCInfo(out string, med *medium, rep *compat.Report) {
+	os.WriteFile(filepath.Join(out, "pc.txt"), []byte(crlfText(pcInfo(med, rep))), 0o644)
+	// The firmware's ACPI tables, which Windows 98 reads to find devices.
+	if tabs, _ := filepath.Glob("/sys/firmware/acpi/tables/*"); len(tabs) > 0 {
+		dir := filepath.Join(out, "acpi")
+		os.MkdirAll(dir, 0o755)
+		for _, t := range tabs {
+			if fi, err := os.Stat(t); err == nil && !fi.IsDir() {
+				copyFile(t, filepath.Join(dir, filepath.Base(t)+".dat"))
+			}
+		}
+	}
+	if o, err := run(10*time.Second, "dmesg"); err == nil {
+		os.WriteFile(filepath.Join(out, "dmesg.txt"), []byte(crlfText(string(o))), 0o644)
+	}
+}
+
+// pcInfo describes this PC and the installer: grade, PCI devices, disks,
+// input devices and UEFI boot entries.
+func pcInfo(med *medium, rep *compat.Report) string {
 	var b strings.Builder
 	if med != nil {
 		fmt.Fprintf(&b, "98Reborn installer %s (built %s)\n", med.Base.Version, med.Base.Built)
@@ -252,20 +294,7 @@ func writePCInfo(out string, med *medium, rep *compat.Report) {
 	if in, err := os.ReadFile("/proc/bus/input/devices"); err == nil {
 		b.WriteString("\nInput devices:\n" + string(in))
 	}
-	os.WriteFile(filepath.Join(out, "pc.txt"), []byte(crlfText(b.String())), 0o644)
-	// The firmware's ACPI tables, which Windows 98 reads to find devices.
-	if tabs, _ := filepath.Glob("/sys/firmware/acpi/tables/*"); len(tabs) > 0 {
-		dir := filepath.Join(out, "acpi")
-		os.MkdirAll(dir, 0o755)
-		for _, t := range tabs {
-			if fi, err := os.Stat(t); err == nil && !fi.IsDir() {
-				copyFile(t, filepath.Join(dir, filepath.Base(t)+".dat"))
-			}
-		}
-	}
-	if o, err := run(10*time.Second, "dmesg"); err == nil {
-		os.WriteFile(filepath.Join(out, "dmesg.txt"), []byte(crlfText(string(o))), 0o644)
-	}
+	return b.String()
 }
 
 func copyFile(src, dst string) error {

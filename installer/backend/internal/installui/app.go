@@ -1058,6 +1058,7 @@ func (a *App) done(u *gui.UI, r, btn gui.Rect) {
 		msg += " 98Reborn Boot starts first: it lists Windows 98 and your other systems."
 	}
 	y += a.note(c, gui.R(r.X, y, r.W, 0), msg, t.Ok, t.OkSoft) + 16
+	y += c.TextBox(t.Body, gui.R(r.X, y, r.W, 0), "Logs: the install's log is in C:\\98REBORN\\LOGS on the new system (with a log of each of its first five starts), and a copy is on this USB stick's 98RLOGS drive, which any computer can open. If something goes wrong later, start from this stick and choose \"Save Windows 98 logs\" on its first screen.", t.Muted, 3)
 	bw := t.Bold.Width("Turn off") + 48
 	if u.Button(gui.R(btn.X, btn.Y, bw, btn.H), "Turn off", false, true) {
 		go a.Sys.PowerOff()

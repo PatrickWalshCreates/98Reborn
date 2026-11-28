@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/win9x-modern/w9xm/internal/fat"
 	"io"
 	"os"
 	"path"
@@ -27,6 +28,10 @@ const (
 	Hybrid   = "boot/syslinux/isohdpfx.bin"
 	// BootFloppy is the CD's El Torito boot floppy, copied by Compose.
 	BootFloppy = "98reborn/cdboot.img"
+	// LogsLabel names the stick's writable FAT32 partition (after the
+	// image), where the installer saves logs any computer can read.
+	LogsLabel = "98RLOGS"
+	LogsSize  = 40 << 20
 )
 
 type Options struct {
@@ -120,6 +125,12 @@ func Compose(o Options) error {
 	if err != nil {
 		hybrid = nil
 	}
+	var logsPart []byte
+	if hybrid != nil {
+		if logsPart, err = fat.EmptyImage(LogsSize, LogsLabel); err != nil {
+			return err
+		}
+	}
 	f, err := os.Create(o.Out)
 	if err != nil {
 		return err
@@ -131,6 +142,7 @@ func Compose(o Options) error {
 		EFI:       &isowriter.BootEntry{Path: EFIBoot, Emulation: "none"},
 		Now:       o.Now,
 		HybridMBR: hybrid,
+		DataPart:  logsPart,
 	})
 	if cerr := f.Close(); err == nil {
 		err = cerr

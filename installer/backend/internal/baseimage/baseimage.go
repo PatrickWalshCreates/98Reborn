@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/win9x-modern/w9xm/internal/compose"
 	"io"
 	"io/fs"
 	"os"
@@ -421,7 +422,7 @@ func espImage(files map[string][]byte, now time.Time) ([]byte, error) {
 	for _, b := range files {
 		total += int64(len(b))
 	}
-	size := total + total/16 + 20<<20 // 16 MiB of it for logs the installer saves there
+	size := total + total/16 + 4<<20
 	if size < 40<<20 {
 		size = 40 << 20
 	}
@@ -456,6 +457,10 @@ func espImage(files map[string][]byte, now time.Time) ([]byte, error) {
 }
 
 func writeISO(out string, files map[string][]byte, hybrid []byte, now time.Time) error {
+	logsPart, err := fat.EmptyImage(compose.LogsSize, compose.LogsLabel)
+	if err != nil {
+		return err
+	}
 	var fl []isowriter.File
 	for p, b := range files {
 		b := b
@@ -474,6 +479,7 @@ func writeISO(out string, files map[string][]byte, hybrid []byte, now time.Time)
 		EFI:       &isowriter.BootEntry{Path: "boot/efi.img", Emulation: "none"},
 		Now:       now,
 		HybridMBR: hybrid,
+		DataPart:  logsPart,
 	})
 	if cerr := f.Close(); err == nil {
 		err = cerr

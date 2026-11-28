@@ -46,6 +46,10 @@ type Options struct {
 	// that starts ISOLINUX on BIOS PCs, and a partition entry for the EFI
 	// image that UEFI firmware boots from. Needs BIOS with InfoTable.
 	HybridMBR []byte
+	// DataPart (with HybridMBR) is appended after the image and described
+	// as a third partition, FAT32 (type 0x0C), which any computer opens: a
+	// writable area on the stick (98Reborn saves logs there).
+	DataPart []byte
 }
 
 type node struct {
@@ -482,7 +486,7 @@ func Write(w io.WriterAt, o Options) error {
 		if biosNode == nil || !o.BIOS.InfoTable || len(o.HybridMBR) < 432 {
 			return errors.New("hybrid MBR needs an ISOLINUX BIOS boot entry and a 432+ byte isohdpfx")
 		}
-		if _, err := w.WriteAt(hybridMBR(o.HybridMBR, biosNode, efiNode, L.total), 0); err != nil {
+		if _, err := w.WriteAt(hybridMBR(o.HybridMBR, biosNode, efiNode, L.total, uint32(len(o.DataPart)/512)), 0); err != nil {
 			return err
 		}
 	}
@@ -492,7 +496,12 @@ func Write(w io.WriterAt, o Options) error {
 		end = int64(last.lba)*sector + last.size
 	}
 	if gap := int64(L.total)*sector - end; gap > 0 {
-		_, err = w.WriteAt(make([]byte, gap), end)
+		if _, err = w.WriteAt(make([]byte, gap), end); err != nil {
+			return err
+		}
+	}
+	if o.HybridMBR != nil && len(o.DataPart) > 0 {
+		_, err = w.WriteAt(o.DataPart, int64(L.total)*sector)
 	}
 	return err
 }
@@ -708,7 +717,7 @@ func writeVDs(w io.WriterAt, o Options, root *node, L layout) error {
 // hybridMBR builds the isohybrid master boot record (as syslinux's isohybrid
 // does with --uefi): the boot code finds isolinux.bin through the LBA stored
 // at offset 432; partition 1 covers the image, partition 2 the EFI image.
-func hybridMBR(code []byte, bios, efi *node, total uint32) []byte {
+func hybridMBR(code []byte, bios, efi *node, total, dataSectors uint32) []byte {
 	mbr := make([]byte, 512)
 	copy(mbr, code[:432])
 	le := binary.LittleEndian
@@ -738,6 +747,9 @@ func hybridMBR(code []byte, bios, efi *node, total uint32) []byte {
 	entry(0, true, 0x17, 0, total*4)
 	if efi != nil {
 		entry(1, false, 0xEF, efi.lba*4, uint32((efi.size+511)/512))
+	}
+	if dataSectors > 0 {
+		entry(2, false, 0x0C, total*4, dataSectors)
 	}
 	mbr[510], mbr[511] = 0x55, 0xAA
 	return mbr

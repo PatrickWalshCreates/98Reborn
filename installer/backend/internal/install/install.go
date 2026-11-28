@@ -15,11 +15,13 @@
 package install
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/win9x-modern/w9xm/internal/disk"
@@ -55,6 +57,10 @@ type Options struct {
 	// ACPI installs Windows 98 in ACPI mode (for UEFI PCs, through ReBIOS).
 	ACPI bool
 
+	// About describes this PC and the installer (grade, hardware). It heads
+	// the install log saved on the new system, \98REBORN\LOGS\INSTALL.TXT.
+	About string
+
 	WorkDir string // scratch space: the setup image lives here (sparse)
 	QEMU    string
 	Log     io.Writer
@@ -78,6 +84,11 @@ func Run(o Options) error {
 	if log == nil {
 		log = io.Discard
 	}
+	// Everything logged also goes into the install log on the new system.
+	var installLog bytes.Buffer
+	log = io.MultiWriter(log, &installLog)
+	started := time.Now()
+	fmt.Fprintf(log, "Install started %s: %s, %s\n", started.Format(time.RFC1123), c.Title, o.Edition)
 	if err := os.MkdirAll(o.WorkDir, 0o755); err != nil {
 		return err
 	}
@@ -111,6 +122,12 @@ func Run(o Options) error {
 		}
 		v.MkdirAll("98REBORN")
 		if err := v.WriteFile("98REBORN/PARTBACK.BIN", backup, time.Now()); err != nil {
+			return err
+		}
+		fmt.Fprintf(log, "Windows 98 Setup and the %s edition are done (%s so far); writing to the disk next.\n",
+			o.Edition, time.Since(started).Round(time.Second))
+		v.MkdirAll("98REBORN/LOGS")
+		if err := v.WriteFile("98REBORN/LOGS/INSTALL.TXT", installText(o, installLog.Bytes()), time.Now()); err != nil {
 			return err
 		}
 		return addBoot(v, o.BootDir)
@@ -250,7 +267,7 @@ func patch(o Options, img string) error {
 	if err != nil {
 		return err
 	}
-	wanted := []string{"installer-cleanup", "new-hardware", "display-vesa", "usb3-xhci98"}
+	wanted := []string{"installer-cleanup", "new-hardware", "display-vesa", "usb3-xhci98", "boot-logs"}
 	var params map[string]map[string]string
 	if o.Edition != "" {
 		ed, err := module.LoadEdition(filepath.Join(o.EditionsDir, o.Edition))
@@ -279,4 +296,18 @@ func patch(o Options, img string) error {
 		return err
 	}
 	return AddExactIDs(tgt, o.Facts)
+}
+
+// installText is the install log saved on the new system (CRLF, for Notepad).
+func installText(o Options, log []byte) []byte {
+	var b bytes.Buffer
+	b.WriteString("98Reborn install log\n====================\n\n")
+	fmt.Fprintf(&b, "Where: %s\nEdition: %s\nACPI mode: %v\n\n", o.Choice.Title, o.Edition, o.ACPI)
+	if o.About != "" {
+		b.WriteString(strings.TrimSpace(o.About) + "\n\n")
+	}
+	b.WriteString("Install steps\n-------------\n")
+	b.Write(log)
+	b.WriteString("\nAfter this, \\98REBORN\\LOGS gets BOOT1.TXT to BOOT5.TXT: Windows 98's log of each of\nits first five starts (a start that froze included).\n")
+	return bytes.ReplaceAll(bytes.ReplaceAll(b.Bytes(), []byte("\r\n"), []byte("\n")), []byte("\n"), []byte("\r\n"))
 }
