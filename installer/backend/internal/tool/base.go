@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -67,8 +68,10 @@ func (b *BaseStore) Status() map[string]any {
 }
 
 type release struct {
-	Tag    string `json:"tag_name"`
-	Assets []struct {
+	Tag       string    `json:"tag_name"`
+	Draft     bool      `json:"draft"`
+	Published time.Time `json:"published_at"`
+	Assets    []struct {
 		Name string `json:"name"`
 		URL  string `json:"browser_download_url"`
 	} `json:"assets"`
@@ -89,7 +92,18 @@ func latest() (tag, isoURL, sumURL string, err error) {
 	if err := json.NewDecoder(resp.Body).Decode(&rs); err != nil {
 		return "", "", "", err
 	}
+	return newestBase(rs)
+}
+
+// newestBase picks the most recently published release that carries a base
+// image. The API doesn't list releases newest first: it sorts them by tag
+// name as text, which puts "alpha.9" before "alpha.11".
+func newestBase(rs []release) (tag, isoURL, sumURL string, err error) {
+	sort.SliceStable(rs, func(i, j int) bool { return rs[i].Published.After(rs[j].Published) })
 	for _, r := range rs {
+		if r.Draft {
+			continue
+		}
 		iso, sum := "", ""
 		for _, a := range r.Assets {
 			switch a.Name {
