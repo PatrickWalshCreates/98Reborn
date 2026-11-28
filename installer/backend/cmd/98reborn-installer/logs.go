@@ -291,6 +291,18 @@ func pcInfo(med *medium, rep *compat.Report) string {
 	}
 	// Input devices: which keyboard and pointer this PC has, and on which bus
 	// (i8042/PS/2, USB, I2C) - what Windows 98 can or can't drive.
+	// The firmware's memory map, in its own order (what Windows 98 reads
+	// through INT 15h E820 on BIOS boots).
+	if ents, err := os.ReadDir("/sys/firmware/memmap"); err == nil {
+		b.WriteString("\nFirmware memory map (index start end type):\n")
+		for i := 0; i < len(ents); i++ {
+			d := fmt.Sprintf("/sys/firmware/memmap/%d/", i)
+			rd := func(f string) string { v, _ := os.ReadFile(d + f); return strings.TrimSpace(string(v)) }
+			if st := rd("start"); st != "" {
+				fmt.Fprintf(&b, "  %2d %18s %18s %s\n", i, st, rd("end"), rd("type"))
+			}
+		}
+	}
 	if in, err := os.ReadFile("/proc/bus/input/devices"); err == nil {
 		b.WriteString("\nInput devices:\n" + string(in))
 	}

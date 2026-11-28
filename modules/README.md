@@ -9,3 +9,4 @@ Modules the installer always applies (besides the edition's):
 - `usb3-xhci98`: the xHCI98 USB 3 controller driver (GPL-2.0-or-later; its source is attached to every release, from `SOURCE-URL.txt`). Windows asks once, at the first start, to install the controller; USB keyboards, mice and hubs then install silently.
 - `boot-logs`: logs Windows 98's first five starts into `C:\98REBORN\LOGS` (startup menu defaults to "Logged" until then).
 - `audio-hda`: WDMHDA (MIT), a generic HD Audio sound driver; Windows installs it silently for this PC's audio controller.
+- `g4-resource-fix`: SweetLow's memory map fix (via patcher9x, MIT), applied only when the hardware scan finds memory mapped above 4 GiB.

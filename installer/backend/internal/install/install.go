@@ -267,7 +267,7 @@ func patch(o Options, img string) error {
 	if err != nil {
 		return err
 	}
-	wanted := []string{"installer-cleanup", "new-hardware", "display-vesa", "usb3-xhci98", "audio-hda", "boot-logs"}
+	wanted := []string{"installer-cleanup", "new-hardware", "display-vesa", "usb3-xhci98", "audio-hda", "g4-resource-fix", "boot-logs"}
 	var params map[string]map[string]string
 	if o.Edition != "" {
 		ed, err := module.LoadEdition(filepath.Join(o.EditionsDir, o.Edition))

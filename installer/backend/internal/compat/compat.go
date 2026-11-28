@@ -69,11 +69,23 @@ type Scan struct {
 	IOMMU          string   `json:"iommu,omitempty"`
 	PCI            []Device `json:"pci"`
 	Disks          []Disk   `json:"disks"`
+	// MemAbove4G: the firmware's memory map has ranges at or above 4 GiB
+	// (yes | no | "" unknown). Windows 98 stops reading that map at the first
+	// such range (SweetLow's 4G resource fix repairs it); "unsorted" means a
+	// range below 4 GiB comes after one above, which is when it bites.
+	MemAbove4G string `json:"mem_above_4g,omitempty"`
 }
 
 // Facts converts a scan into the engine's hardware facts (for --facts).
 func (s *Scan) Facts() *module.Facts {
 	f := &module.Facts{RAMMB: s.RAMMB, CPUMHz: s.CPUMHz, Extra: map[string]string{"firmware": s.Firmware}}
+	switch s.MemAbove4G { // "yes" covers both: modules gate on one value
+	case "yes", "unsorted":
+		f.Extra["mem_above_4g"] = "yes"
+		f.Extra["memmap_unsorted"] = map[bool]string{true: "yes", false: "no"}[s.MemAbove4G == "unsorted"]
+	case "no":
+		f.Extra["mem_above_4g"] = "no"
+	}
 	for _, d := range s.PCI {
 		f.PCI = append(f.PCI, module.PCIDevice{ID: d.ID, Class: d.Class, Name: d.Name})
 	}
@@ -283,6 +295,9 @@ func Evaluate(s *Scan) *Report {
 		add(Finding{Area: "Memory", Level: "info", Cap: Gold, Reason: fmt.Sprintf("%d GB of RAM: Windows 98 will be set to use 1 GB, which is normal and stable.", (s.RAMMB+512)/1024)})
 	case s.RAMMB > 0 && s.RAMMB < 64:
 		add(Finding{Area: "Memory", Level: "block", Cap: None, Reason: "Less than 64 MB of RAM."})
+	}
+	if s.MemAbove4G == "yes" || s.MemAbove4G == "unsorted" {
+		add(Finding{Area: "Memory", Level: "info", Cap: Gold, Reason: "The firmware maps memory above 4 GB: 98Reborn applies SweetLow's memory map fix, so Windows 98 doesn't mistake device memory for RAM."})
 	}
 	if s.CPU != "" {
 		add(Finding{Area: "CPU", Level: "ok", Cap: Gold, Reason: s.CPU + ": compatible (fast-CPU fixes are applied automatically; Windows 98 uses one core)."})

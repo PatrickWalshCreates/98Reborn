@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -67,6 +68,7 @@ func run() (*compat.Scan, error) {
 			s.RAMMB = kb / 1024
 		}
 	}
+	s.MemAbove4G = memAbove4G()
 	// An IOMMU shows up as an ACPI table (Intel DMAR, AMD IVRS) when the
 	// firmware has it switched on.
 	s.IOMMU = "off"
@@ -118,4 +120,44 @@ func run() (*compat.Scan, error) {
 		s.Disks = append(s.Disks, compat.Disk{Name: model, Bus: bus, SizeGB: int(sectors * 512 / 1e9)})
 	}
 	return s, nil
+}
+
+// memAbove4G reads the firmware's memory map (/sys/firmware/memmap, in the
+// firmware's own order): "no" if every range is below 4 GiB, "unsorted" if
+// a range below 4 GiB follows one above it, else "yes"; "" if unreadable.
+func memAbove4G() string {
+	ents, err := os.ReadDir("/sys/firmware/memmap")
+	if err != nil || len(ents) == 0 {
+		return ""
+	}
+	type rng struct {
+		idx   int
+		start uint64
+	}
+	var rs []rng
+	for _, e := range ents {
+		i, err := strconv.Atoi(e.Name())
+		if err != nil {
+			continue
+		}
+		st, err := strconv.ParseUint(strings.TrimPrefix(readTrim("/sys/firmware/memmap/"+e.Name()+"/start"), "0x"), 16, 64)
+		if err != nil {
+			continue
+		}
+		rs = append(rs, rng{i, st})
+	}
+	sort.Slice(rs, func(a, b int) bool { return rs[a].idx < rs[b].idx })
+	seenHigh, res := false, "no"
+	for _, r := range rs {
+		switch {
+		case r.start >= 1<<32:
+			seenHigh = true
+			if res == "no" {
+				res = "yes"
+			}
+		case seenHigh:
+			res = "unsorted"
+		}
+	}
+	return res
 }
