@@ -261,13 +261,13 @@ func withFAT(img string, fn func(*fat.FS) error) error {
 // patch applies the edition plus the installer's own modules: cleanup, fresh
 // hardware detection on the first real start (Setup ran in a virtual PC) and
 // the VESA display driver for graphics adapters without a Windows 98 driver,
-// and the USB 3 (xHCI) controller driver.
+// the USB 3 (xHCI) controller driver and the HD Audio sound driver.
 func patch(o Options, img string) error {
 	all, err := module.LoadDir(o.ModulesDir)
 	if err != nil {
 		return err
 	}
-	wanted := []string{"installer-cleanup", "new-hardware", "display-vesa", "usb3-xhci98", "boot-logs"}
+	wanted := []string{"installer-cleanup", "new-hardware", "display-vesa", "usb3-xhci98", "audio-hda", "boot-logs"}
 	var params map[string]map[string]string
 	if o.Edition != "" {
 		ed, err := module.LoadEdition(filepath.Join(o.EditionsDir, o.Edition))

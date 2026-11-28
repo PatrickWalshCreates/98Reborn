@@ -20,6 +20,7 @@ var exactIDs = []struct {
 }{
 	{"WINDOWS/INF/98RVESA.INF", `=VESA, PCI\CC_0300`, "0300", `%%VESAPCI.DeviceDesc%%=VESA, PCI\%s`}, // display-vesa
 	{"WINDOWS/INF/XHCI98.INF", `=Xhci.Dev,PCI\CC_0C0330`, "0c0330", `%%XhciDesc%%=Xhci.Dev,PCI\%s`},  // usb3-xhci98
+	{"WINDOWS/INF/WDMHDA.INF", `, PCI\CC_0403`, "0403", `%%*WDM_HDA.DeviceDesc%%=WDM_HDA, PCI\%s`},   // audio-hda
 }
 
 // AddExactIDs names this PC's devices in the class-wide driver INFs the

@@ -44,7 +44,7 @@
     {"match": "class:0401", "area": "Audio", "level": "ok", "cap": "gold",
      "reason": "AC'97 audio: Windows 98 drivers exist for most codecs (not included; install after setup)."},
     {"match": "class:0403", "area": "Audio", "level": "warn", "cap": "silver",
-     "reason": "HD Audio: no Windows 98 driver is included yet, so Windows 98 will have no sound for now. Community drivers exist for some codecs; 98Reborn plans to ship one.",
+     "reason": "HD Audio: 98Reborn installs WDMHDA, a generic HD Audio driver (playback, up to 48 kHz stereo). It works with most Realtek and VIA audio chips; others (IDT, Analog Devices, Cirrus Logic) may stay silent. It's young: report glitches.",
      "fix": "For guaranteed sound, a PCIe or PCI Creative/C-Media card."},
 
     {"match": "class:0c0320", "area": "USB", "level": "ok", "cap": "gold",

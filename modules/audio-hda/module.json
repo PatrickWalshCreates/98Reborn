@@ -1,0 +1,29 @@
+{
+  "id": "audio-hda",
+  "name": "HD Audio sound driver (WDMHDA)",
+  "version": "0.26.0",
+  "description": "Sound on the HD Audio ('Azalia') chips almost every PC since 2005 has, through WDMHDA 0.26 by Andrew Hoffman (MIT, https://github.com/andrew-hoffman/wdmhda): a generic controller and codec driver, playback only, up to 48 kHz 16-bit stereo. Works with Intel, AMD, NVIDIA and VIA controllers with Realtek and VIA codecs; IDT, Analog Devices and Cirrus Logic codecs aren't well supported yet. DOS games get Sound Blaster emulation from Windows' own SBEMUL.",
+  "category": "drivers",
+  "license": "MIT (WDMHDA: see files/LICENSE-wdmhda.txt)",
+  "ops": [
+    {
+      "op": "file.copy",
+      "src": "files/hda.sys",
+      "file": "WIN98\\HDA.SYS",
+      "sha256": "2090d7d2cb986f96699e63493afe026fd267710045b7982cd61d410bd8f26b88",
+      "comment": "The setup folder is Windows' source path: the driver installs with no disk prompt, and Windows' own kernel-streaming files come from the same place."
+    },
+    {
+      "op": "file.copy",
+      "src": "files/wdmhda.inf",
+      "file": "{{windir}}\\INF\\WDMHDA.INF",
+      "sha256": "3eb915459783542b48b4a246f2630ffef0b37e7704fb179f13d1f0366aa6a089"
+    },
+    {
+      "op": "file.copy",
+      "src": "files/LICENSE-wdmhda.txt",
+      "file": "WIN98\\WDMHDA.TXT",
+      "sha256": "1fe879d2c2ce796003a2edeb9446b730a16a131194ca4b081d7cc5bd22970994"
+    }
+  ]
+}
